@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aki-Aru | GitHub Ready</title>
+    <title>Aki-Aru | リアルタイム空席確認</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- アイコンセット -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Outfit:wght@400;900&display=swap');
@@ -22,51 +21,52 @@
             color: #f4f4f5; 
             margin: 0;
             overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .font-outfit { font-family: 'Outfit', sans-serif; }
 
-        /* ページ切り替えアニメーション */
         .page { display: none; min-height: 100vh; padding-top: 80px; padding-bottom: 140px; }
-        .page.active { display: block; animation: slideUp 0.4s ease-out; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .page.active { display: block; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* ガラスモーフィズム */
-        .glass { background: var(--glass-white); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); }
+        .glass { background: var(--glass-white); backdrop-filter: blur(25px); border: 1px solid var(--glass-border); }
         .rounded-card { border-radius: 40px; }
         
-        /* ステータスバッジ */
         .status-badge { 
-            width: 60px; height: 60px; border-radius: 50%; 
+            width: 65px; height: 65px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
-            font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 28px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 32px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+            z-index: 10;
         }
 
-        /* 詳細モーダル */
         #detail-modal { 
             position: fixed; inset: 0; z-index: 2000; background: #000; 
-            transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(100%); transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
             overflow-y: auto;
+            visibility: hidden;
         }
-        #detail-modal.active { transform: translateY(0); }
+        #detail-modal.active { transform: translateY(0); visibility: visible; }
 
-        /* ボタン・入力 */
-        .btn-primary { background: white; color: black; font-weight: 900; border-radius: 20px; padding: 20px; width: 100%; text-align: center; transition: 0.2s; }
-        .btn-primary:active { transform: scale(0.96); }
-        .input-dark { background: #121216; border: 1px solid var(--glass-border); border-radius: 16px; padding: 18px; color: white; width: 100%; outline: none; }
+        .btn-primary { background: white; color: black; font-weight: 900; border-radius: 20px; padding: 20px; width: 100%; text-align: center; transition: all 0.2s; border: none; cursor: pointer; }
+        .btn-primary:active { transform: scale(0.95); opacity: 0.9; }
         
-        /* プレビュー用プレースホルダー */
-        .img-placeholder { background: linear-gradient(45deg, #1a1a1e, #2a2a2e); display: flex; items-center; justify-center; overflow: hidden; position: relative; }
-        .img-placeholder::after { content: 'NO IMAGE'; color: rgba(255,255,255,0.1); font-weight: 900; font-size: 10px; letter-spacing: 0.5em; }
-
-        .nav-blur { background: rgba(6, 6, 8, 0.8); backdrop-filter: blur(15px); border-top: 1px solid var(--glass-border); }
+        .input-dark { background: #121216; border: 1px solid var(--glass-border); border-radius: 16px; padding: 18px; color: white; width: 100%; outline: none; font-size: 16px; }
+        .input-dark:focus { border-color: #f59e0b; }
+        
+        .label-mini { text-align: left; font-size: 10px; font-weight: 900; color: #52525b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; margin-left: 4px; display: block; }
+        
+        .campaign-badge { background: linear-gradient(90deg, #f59e0b, #ef4444); color: white; padding: 4px 14px; border-radius: 9999px; font-size: 11px; font-weight: 900; display: inline-block; }
+        .nav-blur { background: rgba(6, 6, 8, 0.85); backdrop-filter: blur(20px); border-top: 1px solid var(--glass-border); }
+        
+        .upload-area { height: 120px; border: 2px dashed var(--glass-border); border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; overflow: hidden; background: rgba(255,255,255,0.02); }
     </style>
 </head>
 <body>
 
-    <!-- ナビゲーションヘッダー -->
-    <nav class="fixed top-0 w-full z-[100] h-20 flex items-center justify-between px-8 bg-black/50 backdrop-blur-md">
+    <!-- Header Navigation -->
+    <nav class="fixed top-0 w-full z-[150] h-20 flex items-center justify-between px-8 bg-black/40 backdrop-blur-lg border-b border-white/5">
         <div class="flex items-center gap-3 cursor-pointer" onclick="showPage('landing')">
             <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
                 <span class="font-outfit font-black italic text-white text-xl">A</span>
@@ -75,261 +75,374 @@
         </div>
     </nav>
 
-    <!-- ページ：トップ -->
+    <!-- PAGE: LANDING -->
     <div id="page-landing" class="page active px-6">
-        <div class="text-center mb-10 mt-4">
-            <h1 class="text-5xl font-outfit font-black italic text-white mb-2 leading-none uppercase">Live<br>Status.</h1>
-            <p class="text-zinc-600 text-[10px] font-black uppercase tracking-[0.4em] mt-4">リアルタイム空席確認</p>
+        <div class="text-center mb-12 mt-6">
+            <h1 class="text-6xl font-outfit font-black italic text-white mb-3 leading-none uppercase tracking-tighter">Live<br>Seats.</h1>
+            <p class="text-zinc-600 text-[10px] font-black uppercase tracking-[0.5em] mt-4 text-zinc-500">リアルタイム空席確認</p>
         </div>
         
-        <div class="space-y-5">
-            <div onclick="selectTheme('food')" class="relative h-60 rounded-card overflow-hidden cursor-pointer group">
-                <div class="absolute inset-0 bg-orange-600 opacity-20 group-active:opacity-40 transition-opacity"></div>
-                <img src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
-                <div class="absolute bottom-8 left-8 flex items-end justify-between w-[calc(100%-64px)]">
-                    <h2 class="text-5xl font-black italic text-white">ご飯</h2>
-                    <div class="w-14 h-14 glass rounded-2xl flex items-center justify-center text-orange-500 text-2xl"><i class="fas fa-utensils"></i></div>
+        <div class="space-y-6">
+            <div onclick="selectTheme('food')" class="relative h-64 rounded-card overflow-hidden cursor-pointer group shadow-2xl">
+                <img src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+                <div class="absolute bottom-10 left-10 flex items-end justify-between w-[calc(100%-80px)]">
+                    <div><h2 class="text-5xl font-black italic text-white tracking-tighter uppercase">ご飯</h2></div>
+                    <div class="w-16 h-16 glass rounded-2xl flex items-center justify-center text-orange-500 text-3xl shadow-xl"><i class="fas fa-utensils"></i></div>
                 </div>
             </div>
 
-            <div onclick="selectTheme('drink')" class="relative h-60 rounded-card overflow-hidden cursor-pointer group">
-                <div class="absolute inset-0 bg-purple-600 opacity-20 group-active:opacity-40 transition-opacity"></div>
-                <img src="https://images.unsplash.com/photo-1538332576228-eb5b4c4de6f5?w=800" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
-                <div class="absolute bottom-8 left-8 flex items-end justify-between w-[calc(100%-64px)]">
-                    <h2 class="text-5xl font-black italic text-white">飲み</h2>
-                    <div class="w-14 h-14 glass rounded-2xl flex items-center justify-center text-purple-500 text-2xl"><i class="fas fa-glass-cheers"></i></div>
+            <div onclick="selectTheme('drink')" class="relative h-64 rounded-card overflow-hidden cursor-pointer group shadow-2xl">
+                <img src="https://images.unsplash.com/photo-1538332576228-eb5b4c4de6f5?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+                <div class="absolute bottom-10 left-10 flex items-end justify-between w-[calc(100%-80px)]">
+                    <div><h2 class="text-5xl font-black italic text-white tracking-tighter uppercase">飲み</h2></div>
+                    <div class="w-16 h-16 glass rounded-2xl flex items-center justify-center text-purple-500 text-3xl shadow-xl"><i class="fas fa-glass-cheers"></i></div>
                 </div>
             </div>
 
-            <div class="pt-10 flex flex-col gap-4">
-                <button onclick="showPage('owner-apply')" class="glass p-8 rounded-card text-center relative overflow-hidden">
+            <div class="pt-10 pb-10">
+                <button onclick="showPage('owner-apply')" class="w-full glass p-8 rounded-card text-center relative overflow-hidden active:scale-95 transition-transform">
                     <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-red-500"></div>
-                    <span class="bg-red-500 text-white text-[9px] font-black px-3 py-1 rounded-full mb-3 inline-block">CAMPAIGN</span>
-                    <p class="text-white font-black text-sm">店舗掲載（3ヶ月間無料）</p>
-                    <p class="text-zinc-500 text-[10px] mt-1 font-bold">飲食店・バーのオーナー様はこちら</p>
+                    <div class="campaign-badge mb-4 italic">3ヶ月無料お試しキャンペーン中</div>
+                    <p class="text-white font-black text-lg uppercase tracking-tight">飲食店オーナー様 出店申請</p>
+                    <p class="text-zinc-500 text-[10px] mt-2 font-bold uppercase">店舗情報の掲載はこちらから</p>
                 </button>
-                <button onclick="showPage('owner-login')" class="text-zinc-700 font-black text-[10px] uppercase tracking-widest py-4">管理者ログイン</button>
+                <button onclick="showPage('owner-login')" class="w-full py-6 text-zinc-700 font-black text-[11px] uppercase tracking-[0.3em] mt-2">オーナー様 ログイン</button>
             </div>
         </div>
     </div>
 
-    <!-- ページ：ショップ一覧 -->
+    <!-- PAGE: SHOP LIST -->
     <div id="page-user-list" class="page px-6">
         <div class="mb-10">
-            <button onclick="showPage('landing')" class="mb-6 text-zinc-500 text-[10px] font-black uppercase"><i class="fas fa-arrow-left mr-2"></i> HOME</button>
-            <h3 class="text-4xl font-outfit font-black italic text-white uppercase tracking-tighter" id="theme-label">NEARBY</h3>
+            <button onclick="showPage('landing')" class="mb-6 py-2 px-4 glass rounded-full text-zinc-400 text-[10px] font-black uppercase"><i class="fas fa-arrow-left mr-2"></i> 戻る</button>
+            <h3 class="text-5xl font-outfit font-black italic text-white uppercase tracking-tighter" id="theme-label-header">店舗一覧</h3>
         </div>
-        <div id="shop-container" class="space-y-12 pb-20">
-            <!-- JSで動的生成 -->
-        </div>
+        <div id="shop-container" class="space-y-12 pb-24"></div>
     </div>
 
-    <!-- ページ：プラン選択 -->
+    <!-- PAGE: PLAN SELECTION (補足追加) -->
     <div id="page-owner-apply" class="page px-6">
-        <div class="mb-10">
-            <button onclick="showPage('landing')" class="mb-6 text-zinc-500 text-[10px] font-black uppercase"><i class="fas fa-arrow-left mr-2"></i> Back</button>
-            <h2 class="text-4xl font-outfit font-black italic text-white uppercase leading-tight">Plans</h2>
+        <div class="mb-12">
+            <button onclick="showPage('landing')" class="mb-8 text-zinc-500 text-[10px] font-black uppercase"><i class="fas fa-arrow-left mr-2"></i> キャンセル</button>
+            <h2 class="text-4xl font-outfit font-black italic text-white uppercase leading-tight tracking-tighter">プランを選択</h2>
+            <p class="text-zinc-500 text-xs mt-4 font-bold">今なら3ヶ月無料お試し期間中！</p>
         </div>
+        
         <div class="space-y-6">
-            <div class="glass p-8 rounded-card border-orange-500/20">
-                <span class="text-orange-500 font-black text-[10px] tracking-widest uppercase">Gohan Plan</span>
-                <h4 class="text-3xl font-black text-white mt-2 mb-6">¥1,500 <span class="text-xs font-normal text-zinc-500">/mo</span></h4>
-                <ul class="text-xs text-zinc-400 space-y-3 mb-8">
-                    <li><i class="fas fa-check text-orange-500 mr-2"></i> リアルタイム空席状況表示</li>
-                    <li><i class="fas fa-check text-orange-500 mr-2"></i> ショップ詳細・メニュー掲載</li>
-                    <li><i class="fas fa-check text-orange-500 mr-2"></i> 3ヶ月間無料トライアル</li>
-                </ul>
-                <button onclick="showPage('owner-form')" class="btn-primary">このプランで登録</button>
+            <!-- Gohan Plan -->
+            <div class="glass p-8 rounded-card border-orange-500/20 relative">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <span class="text-orange-500 font-black text-[11px] tracking-widest uppercase italic block">ご飯プラン</span>
+                        <h4 class="text-4xl font-black text-white">¥1,500<span class="text-sm font-normal text-zinc-500">/月</span></h4>
+                        <span class="text-orange-500/80 text-[10px] font-black mt-1 block">対象：飲食店オーナー様</span>
+                    </div>
+                    <div class="w-10 h-10 bg-orange-500/10 rounded-lg flex items-center justify-center text-orange-500"><i class="fas fa-utensils"></i></div>
+                </div>
+                <div class="space-y-3 mb-8">
+                    <p class="text-xs text-zinc-400 flex items-center"><i class="fas fa-check text-orange-500 mr-3"></i> リアルタイム空席管理 (◯/△/✖︎)</p>
+                    <p class="text-xs text-zinc-400 flex items-center"><i class="fas fa-check text-orange-500 mr-3"></i> 「今日のひとこと」公開機能</p>
+                    <p class="text-xs text-zinc-400 flex items-center"><i class="fas fa-check text-orange-500 mr-3"></i> MAP・電話・詳細情報掲載</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-4 mb-6">
+                    <p class="text-[10px] text-zinc-500 font-bold mb-1 italic">年間払いがお得</p>
+                    <p class="text-sm font-bold text-white">年一括: ¥15,000 <span class="text-orange-500 text-xs"> (実質2ヶ月無料)</span></p>
+                </div>
+                <button onclick="goToRegister('food')" class="btn-primary">プランを選択する</button>
+            </div>
+
+            <!-- Nomi Plan -->
+            <div class="glass p-8 rounded-card border-purple-500/20 relative">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <span class="text-purple-500 font-black text-[11px] tracking-widest uppercase italic block">飲みプラン</span>
+                        <h4 class="text-4xl font-black text-white">¥2,500<span class="text-sm font-normal text-zinc-500">/月</span></h4>
+                        <span class="text-purple-500/80 text-[10px] font-black mt-1 block">対象：居酒屋等のオーナー様</span>
+                    </div>
+                    <div class="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center text-purple-500"><i class="fas fa-glass-cheers"></i></div>
+                </div>
+                <div class="space-y-3 mb-8">
+                    <p class="text-xs text-zinc-400 flex items-center"><i class="fas fa-check text-purple-500 mr-3"></i> 「飲み」カテゴリへの優先表示</p>
+                    <p class="text-xs text-zinc-400 flex items-center"><i class="fas fa-check text-purple-500 mr-3"></i> 深夜帯のアクティブ表示</p>
+                    <p class="text-xs text-zinc-400 flex items-center"><i class="fas fa-check text-purple-500 mr-3"></i> 全機能利用可能</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-4 mb-6">
+                    <p class="text-[10px] text-zinc-500 font-bold mb-1 italic">年間払いがお得</p>
+                    <p class="text-sm font-bold text-white">年一括: ¥25,000 <span class="text-purple-500 text-xs"> (実質2ヶ月無料)</span></p>
+                </div>
+                <button onclick="goToRegister('drink')" class="btn-primary">プランを選択する</button>
             </div>
         </div>
     </div>
 
-    <!-- ページ：店舗登録（書類アップロード） -->
+    <!-- PAGE: REGISTER FORM -->
     <div id="page-owner-form" class="page px-6">
-        <div class="mb-8"><h2 class="text-3xl font-outfit font-black italic text-white uppercase">Register</h2></div>
-        <div class="glass p-8 rounded-card space-y-8">
-            <div class="space-y-4">
-                <p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Shop Profile</p>
-                <input type="text" id="reg-name" placeholder="店舗名" class="input-dark">
-                <select id="reg-cat" class="input-dark">
-                    <option value="" disabled selected>カテゴリー</option>
-                    <option value="焼肉">焼肉</option><option value="スナック・バー">スナック・バー</option><option value="居酒屋">居酒屋</option>
-                </select>
+        <div class="mb-10">
+            <button onclick="showPage('owner-apply')" class="mb-6 text-zinc-500 text-[10px] font-black uppercase"><i class="fas fa-arrow-left mr-2"></i> 戻る</button>
+            <h2 class="text-4xl font-outfit font-black italic text-white uppercase tracking-tighter leading-none">出店登録</h2>
+            <p class="text-zinc-500 text-[10px] font-bold mt-4 italic">すべての項目を正しく入力してください</p>
+        </div>
+        
+        <div class="glass p-8 rounded-card space-y-10 mb-20">
+            <!-- Basic -->
+            <div class="space-y-6">
+                <div>
+                    <span class="label-mini">店舗名</span>
+                    <input type="text" id="reg-name" placeholder="店舗名を入力" class="input-dark">
+                </div>
+                <div>
+                    <span class="label-mini">カテゴリー</span>
+                    <select id="reg-cat" class="input-dark">
+                        <option value="焼肉">焼肉</option>
+                        <option value="居酒屋">居酒屋</option>
+                        <option value="イタリアン">イタリアン</option>
+                        <option value="スナック・バー">スナック・バー</option>
+                        <option value="和食">和食</option>
+                    </select>
+                </div>
             </div>
-            
-            <div class="space-y-4">
-                <p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Verification (重要)</p>
+
+            <!-- Detail -->
+            <div class="space-y-6 border-t border-white/5 pt-8">
+                <div>
+                    <span class="label-mini">住所 (MAP用)</span>
+                    <input type="text" id="reg-addr" placeholder="東京都..." class="input-dark">
+                </div>
+                <div>
+                    <span class="label-mini">電話番号</span>
+                    <input type="tel" id="reg-tel" placeholder="03-xxxx-xxxx" class="input-dark">
+                </div>
+                <div>
+                    <span class="label-mini">営業時間</span>
+                    <input type="text" id="reg-hours" placeholder="17:00 - 24:00" class="input-dark">
+                </div>
+                <div>
+                    <span class="label-mini">平均予算</span>
+                    <input type="text" id="reg-budget" placeholder="¥5,000" class="input-dark">
+                </div>
+            </div>
+
+            <!-- Documents -->
+            <div class="space-y-6 border-t border-white/5 pt-8">
+                <span class="label-mini">審査書類の添付</span>
                 <div class="grid grid-cols-1 gap-4">
-                    <label class="h-28 border-2 border-dashed border-zinc-800 rounded-2xl flex flex-col items-center justify-center cursor-pointer relative overflow-hidden bg-white/5" id="up-lic">
-                        <span class="text-[10px] text-zinc-500 font-bold">飲食店営業許可証 を撮影</span>
-                        <input type="file" accept="image/*" class="absolute inset-0 opacity-0" onchange="handleUpload(this, 'lic')">
+                    <label class="upload-area" id="up-lic-area">
+                        <i class="fas fa-camera text-xl text-zinc-700 mb-2"></i>
+                        <span class="text-[10px] text-zinc-500 font-black">飲食店営業許可証</span>
+                        <input type="file" accept="image/*" class="absolute inset-0 opacity-0" onchange="previewUpload(this, 'lic')">
                         <img id="prev-lic" class="hidden absolute inset-0 w-full h-full object-cover">
                     </label>
-                    <label class="h-28 border-2 border-dashed border-zinc-800 rounded-2xl flex flex-col items-center justify-center cursor-pointer relative overflow-hidden bg-white/5" id="up-id">
-                        <span class="text-[10px] text-zinc-500 font-bold">本人確認書類 を撮影</span>
-                        <input type="file" accept="image/*" class="absolute inset-0 opacity-0" onchange="handleUpload(this, 'id')">
+                    <label class="upload-area" id="up-id-area">
+                        <i class="fas fa-id-card text-xl text-zinc-700 mb-2"></i>
+                        <span class="text-[10px] text-zinc-500 font-black">身分証明書</span>
+                        <input type="file" accept="image/*" class="absolute inset-0 opacity-0" onchange="previewUpload(this, 'id')">
                         <img id="prev-id" class="hidden absolute inset-0 w-full h-full object-cover">
                     </label>
                 </div>
             </div>
 
-            <button onclick="finishRegister()" class="btn-primary">審査を申請する</button>
+            <button onclick="processRegistration()" class="btn-primary uppercase mt-4">情報を保存して申請</button>
         </div>
     </div>
 
-    <!-- ページ：管理画面 -->
+    <!-- PAGE: OWNER DASHBOARD -->
     <div id="page-owner-main" class="page px-6">
         <div class="flex justify-between items-center mb-10">
             <div>
-                <h2 id="adm-shop-name" class="text-2xl font-black italic text-white leading-none">Dashboard</h2>
-                <span class="bg-blue-500/10 text-blue-500 text-[8px] font-black px-2 py-1 rounded-full mt-2 inline-block">審査中</span>
-            </div>
-            <button onclick="location.reload()" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-zinc-600"><i class="fas fa-power-off"></i></button>
-        </div>
-
-        <div class="glass p-8 rounded-card space-y-12">
-            <div class="text-center">
-                <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-6">Status Update</p>
-                <div class="grid grid-cols-3 gap-4">
-                    <button onclick="setAdminStatus('◯')" id="s-ok" class="h-20 rounded-2xl bg-zinc-900 border border-white/5 text-zinc-800 text-3xl font-black">◯</button>
-                    <button onclick="setAdminStatus('△')" id="s-few" class="h-20 rounded-2xl bg-zinc-900 border border-white/5 text-zinc-800 text-3xl font-black">△</button>
-                    <button onclick="setAdminStatus('✖︎')" id="s-full" class="h-20 rounded-2xl bg-zinc-900 border border-white/5 text-zinc-800 text-3xl font-black">✖︎</button>
+                <h2 id="adm-shop-name-display" class="text-3xl font-black italic text-white leading-none tracking-tighter uppercase italic">管理画面</h2>
+                <div class="flex gap-2 mt-2">
+                    <span class="bg-blue-500/10 text-blue-500 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">審査中</span>
                 </div>
             </div>
-            <div class="space-y-4">
-                <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest text-center">Live Shout</p>
-                <textarea id="adm-shout" class="input-dark h-24 text-center resize-none text-lg font-bold" placeholder="今のおすすめは？"></textarea>
-                <button onclick="saveAdminData()" class="btn-primary">更新内容を保存</button>
+            <button onclick="location.reload()" class="w-14 h-14 glass rounded-2xl flex items-center justify-center text-zinc-600"><i class="fas fa-power-off text-xl"></i></button>
+        </div>
+
+        <div class="glass p-8 rounded-card space-y-12 shadow-2xl">
+            <div class="text-center">
+                <p class="label-mini text-center mb-8">リアルタイム空席状況</p>
+                <div class="grid grid-cols-3 gap-5">
+                    <button onclick="updateAdminStatus('◯')" id="adm-btn-ok" class="h-24 rounded-3xl bg-zinc-900 border border-white/5 text-zinc-800 text-4xl font-black transition-all">◯</button>
+                    <button onclick="updateAdminStatus('△')" id="adm-btn-few" class="h-24 rounded-3xl bg-zinc-900 border border-white/5 text-zinc-800 text-4xl font-black transition-all">△</button>
+                    <button onclick="updateAdminStatus('✖︎')" id="adm-btn-full" class="h-24 rounded-3xl bg-zinc-900 border border-white/5 text-zinc-800 text-4xl font-black transition-all">✖︎</button>
+                </div>
+            </div>
+            <div class="space-y-6">
+                <p class="label-mini text-center mb-2">オーナーの「今日のひとこと」</p>
+                <textarea id="adm-shout-text" class="input-dark h-32 text-center resize-none text-xl font-bold leading-relaxed" placeholder="例：新鮮なネタが入荷しました！"></textarea>
+                <button onclick="saveDashboardData()" class="btn-primary mt-4">更新して公開</button>
             </div>
         </div>
     </div>
 
-    <!-- 詳細モーダル -->
+    <!-- PAGE: OWNER LOGIN -->
+    <div id="page-owner-login" class="page px-6">
+        <div class="text-center mb-12 mt-10">
+            <h2 class="text-5xl font-outfit font-black italic text-white uppercase tracking-tighter leading-none">Login</h2>
+        </div>
+        <div class="glass p-10 rounded-card space-y-8">
+            <input type="text" id="login-id" placeholder="ID" class="input-dark">
+            <input type="password" id="login-pw" placeholder="PASSWORD" class="input-dark">
+            <button onclick="handleLogin()" class="btn-primary">サインイン</button>
+        </div>
+    </div>
+
+    <!-- DETAIL MODAL -->
     <div id="detail-modal"></div>
 
-    <!-- ボトムナビ -->
-    <div id="bottom-nav" class="fixed bottom-0 w-full nav-blur h-24 hidden flex items-center justify-around px-12 z-[100]">
-        <button onclick="showPage('landing')" class="flex flex-col items-center gap-1 text-zinc-600"><i class="fas fa-search text-xl"></i><span class="text-[8px] font-black uppercase">Search</span></button>
-        <button onclick="showPage('owner-main')" class="flex flex-col items-center gap-1 text-zinc-600"><i class="fas fa-store text-xl"></i><span class="text-[8px] font-black uppercase">Admin</span></button>
+    <!-- BOTTOM NAV -->
+    <div id="bottom-nav" class="fixed bottom-0 w-full nav-blur h-24 hidden flex items-center justify-around px-12 z-[150]">
+        <button onclick="showPage('user-list-last')" class="flex flex-col items-center gap-1.5 text-zinc-600" id="nav-home">
+            <i class="fas fa-search text-2xl"></i><span class="text-[8px] font-black uppercase tracking-widest">探す</span>
+        </button>
+        <button onclick="checkAdmin()" class="flex flex-col items-center gap-1.5 text-zinc-600" id="nav-admin">
+            <i class="fas fa-store text-2xl"></i><span class="text-[8px] font-black uppercase tracking-widest">店舗管理</span>
+        </button>
     </div>
 
     <script>
-        // データ管理
-        let shops = {
-            's1': { id: 's1', name: '焼肉 暁 -AKATSUKI-', category: '焼肉', status: '◯', shout: '限定タンあります！', hours: '17:00-24:00', budget: '¥6,000-', address: '新宿区歌舞伎町1-1', tel: '03-1234-5678', theme: 'food', img: 'https://images.unsplash.com/photo-1514355315815-2b64b0216b14?w=800' },
-            's2': { id: 's2', name: 'Bar Neo Tokyo', category: 'スナック・バー', status: '△', shout: 'ゆったり飲めます。', hours: '20:00-04:00', budget: '¥3,000-', address: '渋谷区道玄坂2-2', tel: '03-8765-4321', theme: 'drink', img: 'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=800' }
+        let shopData = {
+            's1': { id: 's1', name: '焼肉 暁 -AKATSUKI-', category: '焼肉', status: '◯', shout: '限定厚切りタン、残りわずか！', hours: '17:00 - 23:00', budget: '¥6,000 - ¥8,000', address: '東京都新宿区歌舞伎町1-1-1', tel: '03-1234-5678', theme: 'food', img: 'https://images.unsplash.com/photo-1514355315815-2b64b0216b14?auto=format&fit=crop&w=800&q=80' },
+            's2': { id: 's2', name: 'Bar Neo Tokyo', category: 'スナック・バー', status: '△', shout: '美味しいお酒をご用意しています。', hours: '20:00 - 04:00', budget: '¥3,000 - ¥5,000', address: '東京都渋谷区道玄坂2-2-1', tel: '03-8765-4321', theme: 'drink', img: 'https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=800&q=80' }
         };
 
-        let currentAdminId = 's1';
-        let currentStatus = '◯';
-        let uploads = { lic: false, id: false };
+        let currentAdminShopId = 's1';
+        let currentAdminStatus = '◯';
+        let isUserLoggedIn = false;
+        let selectedRegisterPlan = 'food';
+        let uploadFlags = { lic: false, id: false };
+        let lastTheme = 'food';
 
-        // ページ遷移
         window.showPage = (id) => {
+            if(id === 'user-list-last') { id = 'user-list'; selectTheme(lastTheme); return; }
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById('page-' + id).classList.add('active');
-            const hideNav = ['landing', 'owner-apply', 'owner-form'].includes(id);
-            document.getElementById('bottom-nav').classList.toggle('hidden', hideNav);
+            const navVisible = ['user-list', 'owner-main'].includes(id);
+            document.getElementById('bottom-nav').classList.toggle('hidden', !navVisible);
+            document.getElementById('nav-home').classList.toggle('text-white', id === 'user-list');
+            document.getElementById('nav-admin').classList.toggle('text-white', id === 'owner-main');
             window.scrollTo(0, 0);
         };
 
-        // テーマ別リスト表示
         window.selectTheme = (theme) => {
+            lastTheme = theme;
             const container = document.getElementById('shop-container');
             container.innerHTML = '';
-            document.getElementById('theme-label').innerText = theme === 'food' ? 'Dining' : 'Vibe';
-            
-            Object.values(shops).forEach(shop => {
+            document.getElementById('theme-label-header').innerText = theme === 'food' ? 'Dining' : 'Nightlife';
+            Object.values(shopData).forEach(shop => {
                 if(shop.theme !== theme) return;
-                const colors = {'◯': 'bg-green-400', '△': 'bg-yellow-400', '✖︎': 'bg-red-500'};
+                const colors = { '◯': 'bg-green-400', '△': 'bg-yellow-400', '✖︎': 'bg-red-500' };
                 container.innerHTML += `
-                    <div onclick="openDetail('${shop.id}')" class="relative h-[400px] rounded-card overflow-hidden shadow-2xl">
+                    <div onclick="openShopDetail('${shop.id}')" class="relative h-[450px] rounded-card overflow-hidden shadow-2xl cursor-pointer active:scale-95 transition-transform">
                         <img src="${shop.img}" class="w-full h-full object-cover">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
-                        <div class="absolute top-6 right-6 status-badge ${colors[shop.status]} text-black">${shop.status}</div>
-                        <div class="absolute bottom-10 left-8">
-                            <span class="text-[9px] font-black text-zinc-400 uppercase tracking-widest">${shop.category}</span>
-                            <h4 class="text-3xl font-black italic text-white leading-none mt-1">${shop.name}</h4>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent"></div>
+                        <div class="absolute top-8 right-8 status-badge ${colors[shop.status]} text-black">${shop.status}</div>
+                        <div class="absolute bottom-12 left-10">
+                            <span class="text-[9px] font-black uppercase text-zinc-400 mb-2 block tracking-widest">${shop.category}</span>
+                            <h4 class="text-4xl font-black italic text-white uppercase tracking-tighter">${shop.name}</h4>
                         </div>
                     </div>`;
             });
             showPage('user-list');
         };
 
-        // 詳細表示
-        window.openDetail = (id) => {
-            const shop = shops[id];
-            const colors = {'◯': 'bg-green-400', '△': 'bg-yellow-400', '✖︎': 'bg-red-500'};
+        window.openShopDetail = (id) => {
+            const shop = shopData[id];
+            const colors = { '◯': 'bg-green-400', '△': 'bg-yellow-400', '✖︎': 'bg-red-500' };
             const modal = document.getElementById('detail-modal');
             modal.innerHTML = `
-                <div class="relative h-[45vh]">
+                <div class="relative h-[45vh] w-full">
                     <img src="${shop.img}" class="w-full h-full object-cover">
                     <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
-                    <button onclick="closeDetail()" class="absolute top-10 left-6 w-12 h-12 glass rounded-2xl flex items-center justify-center text-white"><i class="fas fa-arrow-left"></i></button>
+                    <button onclick="closeShopDetail()" class="absolute top-10 left-6 w-14 h-14 glass rounded-2xl flex items-center justify-center text-white"><i class="fas fa-arrow-left"></i></button>
                 </div>
-                <div class="p-8 -mt-16 relative z-10 space-y-10 pb-40">
+                <div class="p-8 -mt-20 relative z-20 space-y-10 pb-40">
                     <div class="flex justify-between items-end">
-                        <h2 class="text-4xl font-black italic text-white leading-none flex-1">${shop.name}</h2>
+                        <div class="flex-1">
+                            <span class="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1 block italic">${shop.category}</span>
+                            <h2 class="text-4xl font-black italic text-white leading-none tracking-tighter uppercase italic">${shop.name}</h2>
+                        </div>
                         <div class="status-badge ${colors[shop.status]} text-black">${shop.status}</div>
                     </div>
-                    <div class="glass p-6 rounded-card text-center italic font-bold text-white text-xl">「${shop.shout}」</div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <a href="tel:${shop.tel}" class="glass p-6 rounded-card flex flex-col items-center"><i class="fas fa-phone mb-2 text-orange-500 text-xl"></i><span class="text-[9px] font-black uppercase text-zinc-500">Call</span></a>
-                        <a href="https://maps.google.com/?q=${shop.address}" target="_blank" class="glass p-6 rounded-card flex flex-col items-center"><i class="fas fa-location-dot mb-2 text-orange-500 text-xl"></i><span class="text-[9px] font-black uppercase text-zinc-500">Map</span></a>
+                    <div class="glass p-8 rounded-card border-white/10">
+                        <span class="label-mini block mb-4">Owner Shout</span>
+                        <p class="text-2xl font-bold text-white italic">「${shop.shout}」</p>
                     </div>
-                    <div class="glass p-8 rounded-card space-y-6 text-sm">
-                        <div class="flex items-center gap-4"><i class="fas fa-clock text-zinc-500 w-5"></i><span>${shop.hours}</span></div>
-                        <div class="flex items-center gap-4"><i class="fas fa-coins text-zinc-500 w-5"></i><span>${shop.budget}</span></div>
-                        <div class="flex items-center gap-4"><i class="fas fa-map-marker-alt text-zinc-500 w-5"></i><span class="text-xs">${shop.address}</span></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <a href="tel:${shop.tel}" class="py-8 glass rounded-card flex flex-col items-center"><i class="fas fa-phone mb-3 text-orange-500 text-2xl"></i><span class="label-mini">電話する</span></a>
+                        <a href="https://maps.google.com/?q=${encodeURIComponent(shop.address)}" target="_blank" class="py-8 glass rounded-card flex flex-col items-center"><i class="fas fa-location-dot mb-3 text-orange-500 text-2xl"></i><span class="label-mini">地図を見る</span></a>
+                    </div>
+                    <div class="glass p-8 rounded-card space-y-8 border-white/5">
+                        <div class="flex items-center gap-6"><i class="fas fa-clock text-zinc-600 text-xl w-6"></i><span class="font-bold text-white">${shop.hours}</span></div>
+                        <div class="flex items-center gap-6"><i class="fas fa-coins text-zinc-600 text-xl w-6"></i><span class="font-bold text-white">${shop.budget}</span></div>
+                        <div class="flex items-center gap-6"><i class="fas fa-map-marker-alt text-zinc-600 text-xl w-6"></i><span class="font-bold text-white text-sm">${shop.address}</span></div>
                     </div>
                 </div>`;
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
         };
-        window.closeDetail = () => { document.getElementById('detail-modal').classList.remove('active'); document.body.style.overflow = ''; };
 
-        // アップロード処理
-        window.handleUpload = (input, type) => {
+        window.closeShopDetail = () => { document.getElementById('detail-modal').classList.remove('active'); document.body.style.overflow = ''; };
+
+        window.goToRegister = (plan) => { selectedRegisterPlan = plan; showPage('owner-form'); };
+
+        window.previewUpload = (input, type) => {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const img = document.getElementById('prev-' + type);
                     img.src = e.target.result;
                     img.classList.remove('hidden');
-                    document.getElementById('up-' + type).style.borderColor = '#22c55e';
-                    uploads[type] = true;
+                    document.getElementById('up-' + type + '-area').style.borderColor = '#22c55e';
+                    uploadFlags[type] = true;
                 };
                 reader.readAsDataURL(input.files[0]);
             }
         };
 
-        window.finishRegister = () => {
+        window.processRegistration = () => {
             const name = document.getElementById('reg-name').value;
-            if(!name || !uploads.lic || !uploads.id) return alert("店舗名と、審査用書類2点が必要です");
-            shops['new'] = { id: 'new', name, category: document.getElementById('reg-cat').value, status: '◯', shout: '登録完了しました！', hours: '設定中', budget: '設定中', address: '設定中', tel: '', theme: 'food', img: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800' };
-            currentAdminId = 'new';
-            document.getElementById('adm-shop-name').innerText = name;
+            const addr = document.getElementById('reg-addr').value;
+            const tel = document.getElementById('reg-tel').value;
+            const hours = document.getElementById('reg-hours').value;
+            const budget = document.getElementById('reg-budget').value;
+            
+            if(!name || !addr || !tel || !hours || !budget) return alert("すべての項目を入力してください");
+            if(!uploadFlags.lic || !uploadFlags.id) return alert("書類をアップロードしてください");
+            
+            const id = 's' + Date.now();
+            shopData[id] = { id, name, category: document.getElementById('reg-cat').value, status: '◯', shout: '新しく公開されました！', hours, budget, address: addr, tel, theme: selectedRegisterPlan, img: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80' };
+            currentAdminShopId = id;
+            isUserLoggedIn = true;
+            document.getElementById('adm-shop-name-display').innerText = name;
+            updateAdminStatus('◯');
             showPage('owner-main');
         };
 
-        // 管理画面ロジック
-        window.setAdminStatus = (s) => {
-            currentStatus = s;
-            ['s-ok', 's-few', 's-full'].forEach(id => document.getElementById(id).className = 'h-20 rounded-2xl bg-zinc-900 border border-white/5 text-zinc-800 text-3xl font-black');
-            const target = s === '◯' ? 's-ok' : (s === '△' ? 's-few' : 's-full');
-            document.getElementById(target).classList.add('bg-white', 'text-black');
+        window.checkAdmin = () => isUserLoggedIn ? showPage('owner-main') : showPage('owner-login');
+        window.handleLogin = () => { isUserLoggedIn = true; handleLoginAction(); };
+        function handleLoginAction(){
+            const s = shopData[currentAdminShopId];
+            document.getElementById('adm-shop-name-display').innerText = s.name;
+            document.getElementById('adm-shout-text').value = s.shout;
+            updateAdminStatus(s.status);
+            showPage('owner-main');
+        }
+
+        window.updateAdminStatus = (s) => {
+            currentAdminStatus = s;
+            ['adm-btn-ok', 'adm-btn-few', 'adm-btn-full'].forEach(id => document.getElementById(id).className = 'h-24 rounded-3xl bg-zinc-900 border border-white/5 text-zinc-800 text-4xl font-black transition-all');
+            const tid = s === '◯' ? 'adm-btn-ok' : (s === '△' ? 'adm-btn-few' : 'adm-btn-full');
+            document.getElementById(tid).classList.add('bg-white', 'text-black', 'scale-105');
         };
 
-        window.saveAdminData = () => {
-            shops[currentAdminId].status = currentStatus;
-            shops[currentAdminId].shout = document.getElementById('adm-shout').value || shops[currentAdminId].shout;
+        window.saveDashboardData = () => {
+            shopData[currentAdminShopId].status = currentAdminStatus;
+            shopData[currentAdminShopId].shout = document.getElementById('adm-shout-text').value;
             alert("更新しました！");
             showPage('landing');
         };
-
-        window.onload = () => { setAdminStatus('◯'); };
     </script>
 </body>
 </html>
