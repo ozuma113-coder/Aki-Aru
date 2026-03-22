@@ -1,672 +1,1136 @@
+
+
 <!DOCTYPE html>
+
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aki-Aru | リアルタイム空席確認</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Outfit:wght@400;900&display=swap');
-        
-        :root {
-            --bg-base: #060608;
-            --glass-white: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --primary: #f59e0b;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#060608">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aki-Aru">
+<title>Aki-Aru | リアルタイム空席確認</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Outfit:wght@400;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--bg:#060608;--g:rgba(255,255,255,.03);--b:rgba(255,255,255,.08);--p:#f59e0b;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:#f4f4f5;margin:0;overflow-x:hidden;}
+.fo{font-family:'Outfit',sans-serif;}
+.page{display:none;min-height:100vh;padding-top:112px;padding-bottom:148px;}
+.page.active{display:block;animation:su .38s cubic-bezier(.16,1,.3,1);}
+@keyframes su{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.glass{background:var(--g);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--b);}
+.rc{border-radius:30px;}
+.sbadge{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-weight:900;font-size:11px;line-height:1.2;text-align:center;padding:4px;box-shadow:0 8px 22px rgba(0,0,0,.6);}
+#detail-modal{position:fixed;inset:0;z-index:2000;background:#060608;transform:translateY(100%);transition:transform .46s cubic-bezier(.16,1,.3,1);overflow-y:auto;visibility:hidden;}
+#detail-modal.open{transform:translateY(0);visibility:visible;}
+.bw{background:white;color:black;font-weight:900;border-radius:16px;padding:17px;width:100%;text-align:center;transition:.18s;border:none;cursor:pointer;font-size:14px;font-family:inherit;}
+.bw:active{transform:scale(.96);}
+.inp{background:#0d0d10;border:1px solid var(--b);border-radius:13px;padding:15px 16px;color:white;width:100%;outline:none;font-size:16px;transition:.2s;font-family:inherit;}
+.inp:focus{border-color:var(--p);}
+.lbl{display:block;font-size:10px;font-weight:900;color:#52525b;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px;margin-left:2px;}
+.nav-blur{background:rgba(6,6,8,.94);backdrop-filter:blur(20px);border-top:1px solid var(--b);}
+.upload-area{border:2px dashed var(--b);border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;background:rgba(255,255,255,.015);}
+.main-upload{height:180px;}
+.doc-upload{height:105px;border-style:dotted;}
+.gallery-wrap{position:relative;width:100%;height:44vh;overflow:hidden;}
+.gallery-scroll{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;width:100%;height:100%;scrollbar-width:none;}
+.gallery-scroll::-webkit-scrollbar{display:none;}
+.gallery-item{flex:0 0 100%;scroll-snap-align:start;}
+.gdots{position:absolute;bottom:76px;width:100%;display:flex;justify-content:center;gap:6px;z-index:30;pointer-events:none;}
+.dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.28);transition:.28s;}
+.dot.active{background:white;transform:scale(1.45);}
+.tog{background:#0d0d10;border:1px solid var(--b);border-radius:13px;padding:15px;color:#52525b;width:100%;text-align:center;font-weight:bold;cursor:pointer;transition:.25s;font-family:inherit;}
+.tog.sel{background:var(--p);color:black;border-color:var(--p);}
+.pill{flex:0 0 auto;padding:7px 16px;border-radius:100px;font-size:11px;font-weight:900;background:rgba(255,255,255,.04);border:1px solid var(--b);color:#71717a;transition:.2s;cursor:pointer;white-space:nowrap;}
+.pill.active{background:white;color:black;border-color:white;}
+.sbtn{font-size:10px;font-weight:900;color:#52525b;border:none;border-bottom:2px solid transparent;padding-bottom:3px;background:none;cursor:pointer;}
+.sbtn.active{color:white;border-bottom-color:var(--p);}
+.lpill{font-size:10px;font-weight:900;color:#52525b;padding:4px 10px;border-radius:8px;transition:.2s;background:none;border:none;cursor:pointer;}
+.lpill.active{color:white;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1);}
+.ns{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.ns::-webkit-scrollbar{display:none;}
+.toast{position:fixed;bottom:116px;left:50%;transform:translateX(-50%) translateY(16px);background:#18181c;border:1px solid var(--b);border-radius:14px;padding:12px 22px;font-size:13px;font-weight:700;z-index:9999;opacity:0;transition:.28s;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.ok{border-color:rgba(34,197,94,.4);color:#4ade80;}
+.toast.err{border-color:rgba(239,68,68,.4);color:#f87171;}
+.toast.info{border-color:rgba(99,102,241,.4);color:#a5b4fc;}
+.abtn{height:84px;border-radius:22px;background:#0d0d10;border:1px solid var(--b);font-weight:900;color:#3f3f46;transition:all .22s;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}
+.abtn.aok{background:#16a34a;border-color:#16a34a;color:white;transform:scale(1.05);}
+.abtn.afew{background:#d97706;border-color:#d97706;color:white;transform:scale(1.05);}
+.abtn.afull{background:#dc2626;border-color:#dc2626;color:white;transform:scale(1.05);}
+.vtab{flex:1;padding:10px;text-align:center;font-size:11px;font-weight:900;color:#52525b;cursor:pointer;border-bottom:2px solid transparent;transition:.2s;background:none;border-left:none;border-right:none;border-top:none;}
+.vtab.active{color:white;border-bottom-color:var(--p);}
+#map-wrap{height:calc(100vh - 280px);min-height:320px;border-radius:22px;overflow:hidden;}
+.leaflet-container{background:#0d0d10 !important;}
+.leaflet-tile{filter:invert(1) hue-rotate(180deg) brightness(.82) saturate(.55);}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{display:none!important;}
+.leaflet-control-zoom a{background:#18181c!important;color:white!important;border-color:var(--b)!important;}
 
-        body { 
-            font-family: 'Noto Sans JP', sans-serif; 
-            background-color: var(--bg-base); 
-            color: #f4f4f5; 
-            margin: 0;
-            overflow-x: hidden;
-            -webkit-tap-highlight-color: transparent;
-        }
+/* ===== スプラッシュ ===== */
+#splash{position:fixed;inset:0;z-index:9000;background:var(–bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .5s;}
+#splash.hide{opacity:0;pointer-events:none;}
+.spin{width:34px;height:34px;border:3px solid rgba(255,255,255,.08);border-top-color:var(–p);border-radius:50%;animation:sp .8s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg)}}
 
-        .font-outfit { font-family: 'Outfit', sans-serif; }
+/* ===== LINE バナー ===== */
+#line-banner{position:fixed;bottom:88px;left:12px;right:12px;z-index:1400;background:linear-gradient(135deg,#06c755,#00b547);border-radius:20px;padding:14px 16px;display:none;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(6,199,85,.35);}
+#line-banner.show{display:flex;}
 
-        .page { display: none; min-height: 100vh; padding-top: 110px; padding-bottom: 140px; }
-        .page.active { display: block; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+/* ===== 🔥 中毒性UI ===== */
 
-        .glass { background: var(--glass-white); backdrop-filter: blur(25px); border: 1px solid var(--glass-border); }
-        .rounded-card { border-radius: 40px; }
-        
-        .status-badge { 
-            width: 65px; height: 65px; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; 
-            font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 32px;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.6);
-            z-index: 10;
-        }
+/* ランキングカード */
+.rank-card{background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(220,38,38,.06));border:1px solid rgba(245,158,11,.2);border-radius:28px;padding:20px;cursor:pointer;transition:.2s;position:relative;overflow:hidden;}
+.rank-card:active{transform:scale(.97);}
+.rank-card::before{content:’’;position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(–p),#dc2626);}
+.rank-num{font-family:‘Outfit’,sans-serif;font-weight:900;font-style:italic;font-size:42px;line-height:1;color:rgba(245,158,11,.25);}
+.rank-num.top{color:var(–p);}
 
-        #detail-modal { 
-            position: fixed; inset: 0; z-index: 2000; background: #000; 
-            transform: translateY(100%); transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-            overflow-y: auto;
-            visibility: hidden;
-        }
-        #detail-modal.active { transform: translateY(0); visibility: visible; }
+/* 確率ゲージ */
+.prob-wrap{position:relative;height:8px;background:rgba(255,255,255,.06);border-radius:100px;overflow:hidden;}
+.prob-bar{height:100%;border-radius:100px;transition:width 1s cubic-bezier(.16,1,.3,1);}
+.prob-high{background:linear-gradient(90deg,#16a34a,#4ade80);}
+.prob-mid{background:linear-gradient(90deg,#d97706,#fbbf24);}
+.prob-low{background:linear-gradient(90deg,#dc2626,#f87171);}
 
-        .btn-primary { background: white; color: black; font-weight: 900; border-radius: 20px; padding: 20px; width: 100%; text-align: center; transition: all 0.2s; border: none; cursor: pointer; }
-        .btn-primary:active { transform: scale(0.95); opacity: 0.9; }
-        
-        .input-dark { background: #121216; border: 1px solid var(--glass-border); border-radius: 16px; padding: 18px; color: white; width: 100%; outline: none; font-size: 16px; }
-        .input-dark:focus { border-color: var(--primary); }
-        
-        .label-mini { text-align: left; font-size: 10px; font-weight: 900; color: #52525b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; margin-left: 4px; display: block; }
-        
-        .nav-blur { background: rgba(6, 6, 8, 0.85); backdrop-filter: blur(20px); border-top: 1px solid var(--glass-border); }
-        
-        .upload-area { border: 2px dashed var(--glass-border); border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; overflow: hidden; background: rgba(255,255,255,0.02); transition: all 0.3s; }
-        .main-upload { height: 200px; }
-        .doc-upload { height: 120px; border-style: dotted; }
+/* 確率スコア大表示 */
+.score-ring{width:100px;height:100px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;}
+.score-ring svg{position:absolute;inset:0;transform:rotate(-90deg);}
+.score-num{font-family:‘Outfit’,sans-serif;font-weight:900;font-size:28px;line-height:1;position:relative;z-index:1;}
+.score-label{font-size:9px;font-weight:900;color:#71717a;text-transform:uppercase;letter-spacing:.1em;position:relative;z-index:1;}
 
-        .gallery-wrapper { position: relative; width: 100%; height: 45vh; overflow: hidden; }
-        .gallery-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; width: 100%; height: 100%; scrollbar-width: none; }
-        .gallery-item { flex: 0 0 100%; width: 100%; height: 100%; scroll-snap-align: start; }
-        .gallery-dots { position: absolute; bottom: 85px; width: 100%; display: flex; justify-content: center; gap: 6px; z-index: 30; }
-        .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.3); transition: all 0.3s; }
-        .dot.active { background: white; transform: scale(1.3); }
+/* レーダー */
+#radar-canvas{display:block;margin:0 auto;}
+.radar-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
 
-        .toggle-btn { background: #121216; border: 1px solid var(--glass-border); border-radius: 16px; padding: 18px; color: #52525b; width: 100%; text-align: center; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .toggle-btn.selected { background: var(--primary); color: black; border-color: var(--primary); }
+/* 🔥 ホット表示 */
+.hot-badge{background:linear-gradient(135deg,#dc2626,#f97316);color:white;font-size:9px;font-weight:900;padding:3px 8px;border-radius:100px;display:inline-flex;align-items:center;gap:4px;}
+.pulse-dot{width:6px;height:6px;border-radius:50%;background:white;animation:pd 1.2s ease-in-out infinite;}
+@keyframes pd{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.6}}
 
-        .sub-cat-pill {
-            flex: 0 0 auto; padding: 8px 20px; border-radius: 100px; font-size: 11px; font-weight: 900;
-            background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: #71717a; transition: all 0.2s;
-        }
-        .sub-cat-pill.active { background: white; color: black; border-color: white; }
-        
-        .sort-btn { font-size: 10px; font-weight: 900; color: #52525b; border-bottom: 2px solid transparent; padding-bottom: 4px; }
-        .sort-btn.active { color: white; border-color: var(--primary); }
+/* タブ（ランキング・レーダー） */
+.feat-tab{flex:1;padding:11px 6px;text-align:center;font-size:11px;font-weight:900;color:#52525b;cursor:pointer;border-bottom:2px solid transparent;transition:.2s;background:none;border-left:none;border-right:none;border-top:none;}
+.feat-tab.active{color:white;border-bottom-color:var(–p);}
 
-        .lang-pill { font-size: 10px; font-weight: 900; color: #52525b; padding: 4px 10px; border-radius: 8px; transition: 0.2s; }
-        .lang-pill.active { color: white; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-    </style>
+/* 確率カード（詳細モーダル内） */
+.prob-card{background:rgba(255,255,255,.03);border:1px solid var(–b);border-radius:22px;padding:20px;}
+
+select option{background:#18181c;}
+</style>
+
 </head>
 <body>
 
-    <!-- Header Navigation -->
-    <nav class="fixed top-0 w-full z-[150] bg-black/40 backdrop-blur-lg border-b border-white/5">
-        <div class="h-16 flex items-center justify-between px-8">
-            <div class="flex items-center gap-3 cursor-pointer" onclick="showPage('landing')">
-                <div class="w-9 h-9 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <span class="font-outfit font-black italic text-white text-lg">A</span>
-                </div>
-                <span class="font-outfit font-black italic text-lg uppercase text-white tracking-tighter">Aki-Aru</span>
-            </div>
-            <div id="gps-indicator" class="flex items-center gap-2">
-                <div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                <span class="text-[8px] font-black uppercase text-zinc-500 tracking-widest">Live GPS</span>
-            </div>
-        </div>
-        <div class="px-8 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
-            <button onclick="setLang('ja')" id="l-ja" class="lang-pill active">JP</button>
-            <button onclick="setLang('en')" id="l-en" class="lang-pill">EN</button>
-            <button onclick="setLang('zh-tw')" id="l-zh-tw" class="lang-pill">繁體</button>
-            <button onclick="setLang('zh-cn')" id="l-zh-cn" class="lang-pill">简体</button>
-            <button onclick="setLang('ko')" id="l-ko" class="lang-pill">KR</button>
-        </div>
-    </nav>
+<!-- スプラッシュ -->
 
-    <!-- PAGE: LANDING -->
-    <div id="page-landing" class="page active px-6">
-        <div class="text-center mb-12 mt-6">
-            <h1 class="text-6xl font-outfit font-black italic text-white mb-3 leading-none uppercase tracking-tighter" data-i18n="hero_title">Live<br>Seats.</h1>
-            <p class="text-zinc-600 text-[10px] font-black uppercase tracking-[0.5em] mt-4" data-i18n="hero_sub">リアルタイム空席確認</p>
-        </div>
-        
-        <div class="space-y-6">
-            <div onclick="selectTheme('food')" class="relative h-64 rounded-card overflow-hidden cursor-pointer shadow-2xl transition-transform active:scale-95">
-                <img src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
-                <div class="absolute bottom-10 left-10 flex items-end justify-between w-[calc(100%-80px)]">
-                    <div><h2 class="text-5xl font-black italic text-white tracking-tighter uppercase" data-i18n="food">ご飯</h2></div>
-                    <div class="w-16 h-16 glass rounded-2xl flex items-center justify-center text-orange-500 text-3xl shadow-xl"><i class="fas fa-utensils"></i></div>
-                </div>
-            </div>
+<div id="splash">
+  <div style="width:76px;height:76px;background:linear-gradient(135deg,#f59e0b,#dc2626);border-radius:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 20px 60px rgba(245,158,11,.4);">
+    <span class="fo" style="font-weight:900;font-style:italic;color:white;font-size:40px;">A</span>
+  </div>
+  <span class="fo" style="font-weight:900;font-style:italic;color:white;font-size:22px;letter-spacing:-.5px;">Aki-Aru</span>
+  <div class="spin" style="margin-top:4px;"></div>
+</div>
 
-            <div onclick="selectTheme('drink')" class="relative h-64 rounded-card overflow-hidden cursor-pointer shadow-2xl transition-transform active:scale-95">
-                <img src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
-                <div class="absolute bottom-10 left-10 flex items-end justify-between w-[calc(100%-80px)]">
-                    <div><h2 class="text-5xl font-black italic text-white tracking-tighter uppercase" data-i18n="drink">飲み</h2></div>
-                    <div class="w-16 h-16 glass rounded-2xl flex items-center justify-center text-purple-500 text-3xl shadow-xl"><i class="fas fa-glass-cheers"></i></div>
-                </div>
-            </div>
+<div id="toast" class="toast"></div>
 
-            <div class="pt-10 pb-10">
-                <button onclick="showPage('owner-apply')" class="w-full glass p-8 rounded-card text-center relative overflow-hidden active:scale-95 transition-transform">
-                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-red-500"></div>
-                    <p class="text-white font-black text-lg uppercase tracking-tight" data-i18n="owner_apply_btn">飲食店オーナー様 出店申請</p>
-                    <p class="text-zinc-500 text-[10px] mt-2 font-bold uppercase italic" data-i18n="owner_campaign">今なら3ヶ月無料お試しキャンペーン中</p>
-                </button>
-                <button onclick="showPage('owner-login')" class="w-full py-6 text-zinc-700 font-black text-[11px] uppercase tracking-[0.3em] mt-2" data-i18n="owner_login_btn">オーナー様 ログイン</button>
-            </div>
-        </div>
+<!-- LINE バナー -->
+
+<div id="line-banner">
+  <div style="width:38px;height:38px;background:white;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:900;font-size:20px;color:#06c755;">L</div>
+  <div style="flex:1;"><p style="color:white;font-weight:900;font-size:13px;margin:0;">LINEで空席を更新</p><p style="color:rgba(255,255,255,.7);font-size:10px;font-weight:700;margin:2px 0 0;">◯△✖︎を返信するだけ</p></div>
+  <button onclick="connectLine()" style="background:white;color:#06c755;font-weight:900;font-size:11px;padding:8px 14px;border-radius:12px;border:none;cursor:pointer;">連携する</button>
+  <button onclick="document.getElementById('line-banner').classList.remove('show')" style="background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer;padding:0 2px;"><i class="fas fa-times"></i></button>
+</div>
+
+<!-- ヘッダー -->
+
+<nav class="fixed top-0 w-full z-[150] bg-black/55 backdrop-blur-xl border-b border-white/5">
+  <div class="h-14 flex items-center justify-between px-5">
+    <div class="flex items-center gap-3 cursor-pointer" onclick="showPage('landing')">
+      <div style="width:32px;height:32px;background:linear-gradient(135deg,#f97316,#dc2626);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+        <span class="fo" style="font-weight:900;font-style:italic;color:white;font-size:16px;">A</span>
+      </div>
+      <span class="fo" style="font-weight:900;font-style:italic;font-size:18px;color:white;letter-spacing:-.5px;">Aki-Aru</span>
     </div>
-
-    <!-- PAGE: SHOP LIST -->
-    <div id="page-user-list" class="page px-0">
-        <div class="px-6 mb-6">
-            <button onclick="showPage('landing')" class="mb-6 py-2 px-4 glass rounded-full text-zinc-400 text-[10px] font-black uppercase"><i class="fas fa-arrow-left mr-2"></i> <span data-i18n="back">戻る</span></button>
-            <div class="flex justify-between items-end">
-                <h3 class="text-5xl font-outfit font-black italic text-white uppercase tracking-tighter" id="theme-label-header">Dining</h3>
-                <div class="flex gap-4 mb-1">
-                    <button id="sort-dist" onclick="setSort('dist')" class="sort-btn active" data-i18n="sort_near">近い順</button>
-                    <button id="sort-time" onclick="setSort('time')" class="sort-btn" data-i18n="sort_recent">更新順</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="sub-cat-container" class="flex overflow-x-auto px-6 gap-3 mb-8 no-scrollbar"></div>
-        <div id="shop-container" class="space-y-12 px-6 pb-24"></div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <div style="width:6px;height:6px;border-radius:50%;background:#22c55e;" class="animate-pulse"></div>
+      <span style="font-size:8px;font-weight:900;color:#52525b;text-transform:uppercase;letter-spacing:.15em;">Live GPS</span>
     </div>
+  </div>
+  <div class="px-5 pb-3 flex gap-1 ns">
+    <button onclick="setLang('ja')"    id="l-ja"    class="lpill active">JP</button>
+    <button onclick="setLang('en')"    id="l-en"    class="lpill">EN</button>
+    <button onclick="setLang('zh-tw')" id="l-zh-tw" class="lpill">繁體</button>
+    <button onclick="setLang('zh-cn')" id="l-zh-cn" class="lpill">简体</button>
+    <button onclick="setLang('ko')"    id="l-ko"    class="lpill">KR</button>
+  </div>
+</nav>
 
-    <!-- PAGE: OWNER LOGIN -->
-    <div id="page-owner-login" class="page px-6">
-        <div class="mb-12">
-            <button onclick="showPage('landing')" class="mb-8 text-zinc-500 text-[10px] font-black uppercase"><i class="fas fa-arrow-left mr-2"></i> <span data-i18n="back">戻る</span></button>
-            <h2 class="text-5xl font-outfit font-black italic text-white uppercase tracking-tighter leading-none">Owner<br>Login</h2>
-        </div>
-        <div class="glass p-10 rounded-card space-y-8 shadow-2xl border-white/5 text-center">
-            <div>
-                <span class="label-mini" data-i18n="login_id">ログインID</span>
-                <input type="text" id="login-id" class="input-dark" value="owner123">
-            </div>
-            <div>
-                <span class="label-mini" data-i18n="login_pw">パスワード</span>
-                <input type="password" id="login-pw" class="input-dark" value="password">
-            </div>
-            <button onclick="handleLogin()" class="btn-primary uppercase mt-4" data-i18n="signin">サインイン</button>
-        </div>
+<!-- ===== LANDING ===== -->
+
+<div id="page-landing" class="page active px-5">
+  <div class="text-center mb-8 mt-4">
+    <h1 class="fo text-6xl font-black italic text-white leading-none uppercase tracking-tighter" data-i18n="hero_title">Live<br>Seats.</h1>
+    <p class="text-zinc-600 text-[9px] font-black uppercase tracking-[.5em] mt-4" data-i18n="hero_sub">リアルタイム空席確認</p>
+  </div>
+
+  <!-- 🔥 今日のホットスポット（ランディングに配置） -->
+
+  <div class="mb-6 glass p-5 rc" style="border:1px solid rgba(245,158,11,.15);">
+    <div class="flex items-center gap-2 mb-4">
+      <span class="hot-badge"><div class="pulse-dot"></div>LIVE</span>
+      <span class="text-white font-black text-sm" data-i18n="hot_now">今夜空いてる店 TOP3</span>
     </div>
+    <div id="landing-hot" class="space-y-3"></div>
+  </div>
 
-    <!-- PAGE: OWNER DASHBOARD -->
-    <div id="page-owner-main" class="page px-6">
-        <div class="flex justify-between items-center mb-10">
-            <div>
-                <h2 id="adm-shop-name-display" class="text-3xl font-black italic text-white uppercase tracking-tighter" data-i18n="admin_title">管理画面</h2>
-                <span class="bg-blue-500/10 text-blue-500 text-[8px] font-black px-2 py-0.5 rounded-full uppercase mt-2 inline-block" data-i18n="service_running">サービス稼働中</span>
-            </div>
-            <button onclick="location.reload()" class="w-14 h-14 glass rounded-2xl flex items-center justify-center text-zinc-600"><i class="fas fa-power-off text-xl"></i></button>
-        </div>
-
-        <div class="glass p-8 rounded-card text-center space-y-12 shadow-2xl border-white/5">
-            <div>
-                <p class="label-mini text-center mb-8 italic uppercase tracking-widest" data-i18n="current_status">現在の空席ステータス</p>
-                <div class="grid grid-cols-3 gap-5">
-                    <button onclick="updateAdminStatus('◯')" id="adm-btn-ok" class="h-24 rounded-3xl bg-zinc-900 border border-white/5 text-zinc-800 text-4xl font-black transition-all">◯</button>
-                    <button onclick="updateAdminStatus('△')" id="adm-btn-few" class="h-24 rounded-3xl bg-zinc-900 border border-white/5 text-zinc-800 text-4xl font-black transition-all">△</button>
-                    <button onclick="updateAdminStatus('✖︎')" id="adm-btn-full" class="h-24 rounded-3xl bg-zinc-900 border border-white/5 text-zinc-800 text-4xl font-black transition-all">✖︎</button>
-                </div>
-            </div>
-            
-            <div class="pt-8 border-t border-white/5">
-                <p class="label-mini text-center mb-4 italic uppercase tracking-widest" data-i18n="todays_shout">本日の「ひとこと」</p>
-                <textarea id="adm-shout-text" class="input-dark h-32 text-center text-lg font-bold italic" placeholder="例：限定メニュー入荷しました！"></textarea>
-                <button onclick="saveDashboardData()" class="btn-primary mt-10 uppercase" data-i18n="publish_btn">ステータスを即時公開</button>
-            </div>
-        </div>
+  <div class="space-y-5">
+    <div onclick="selectTheme('food')" class="relative h-52 rc overflow-hidden cursor-pointer shadow-2xl transition-transform active:scale-95">
+      <img src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover">
+      <div class="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent"></div>
+      <div class="absolute bottom-7 left-7 flex items-end justify-between w-[calc(100%-56px)]">
+        <h2 class="fo text-5xl font-black italic text-white tracking-tighter uppercase" data-i18n="food">ご飯</h2>
+        <div class="w-13 h-13 glass rounded-2xl flex items-center justify-center text-orange-500 text-2xl w-14 h-14"><i class="fas fa-utensils"></i></div>
+      </div>
     </div>
-
-    <!-- PAGE: PLAN SELECTION -->
-    <div id="page-owner-apply" class="page px-6">
-        <div class="mb-12">
-            <button onclick="showPage('landing')" class="mb-8 text-zinc-500 text-[10px] font-black uppercase"><i class="fas fa-arrow-left mr-2"></i> <span data-i18n="cancel">キャンセル</span></button>
-            <h2 class="text-4xl font-outfit font-black italic text-white uppercase leading-tight tracking-tighter">Plan Select</h2>
-        </div>
-        
-        <div class="grid grid-cols-1 gap-6 pb-20">
-            <div class="glass p-8 rounded-card border-orange-500/20 relative overflow-hidden">
-                <span class="text-orange-500 font-black text-[11px] tracking-widest uppercase italic block mb-2" data-i18n="plan_food">通常プラン（ご飯）</span>
-                <h4 class="text-4xl font-black text-white mb-4">¥1,500<span class="text-sm font-normal text-zinc-500">/月</span></h4>
-                <div class="space-y-2 mb-6 text-[10px] text-zinc-400 font-bold">
-                    <p><i class="fas fa-check mr-2"></i><span data-i18n="feat_1">リアルタイム空席表示</span></p>
-                    <p><i class="fas fa-check mr-2"></i><span data-i18n="feat_2">店舗詳細ページの作成</span></p>
-                </div>
-                <button onclick="setPlan('food')" class="btn-primary" data-i18n="register_with_plan">このプランで登録</button>
-            </div>
-            <div class="glass p-8 rounded-card border-purple-500/20 relative overflow-hidden">
-                <span class="text-purple-500 font-black text-[11px] tracking-widest uppercase italic block mb-2" data-i18n="plan_drink">飲みプラン（夜・バー）</span>
-                <h4 class="text-4xl font-black text-white mb-4">¥2,500<span class="text-sm font-normal text-zinc-500">/月</span></h4>
-                <div class="space-y-2 mb-6 text-[10px] text-zinc-400 font-bold">
-                    <p><i class="fas fa-check mr-2"></i><span data-i18n="feat_3">深夜帯のアクティブ表示強化</span></p>
-                    <p><i class="fas fa-check mr-2"></i><span data-i18n="feat_4">カテゴリ内優先表示</span></p>
-                </div>
-                <button onclick="setPlan('drink')" class="btn-primary bg-purple-600 text-white border-none" data-i18n="register_with_plan">このプランで登録</button>
-            </div>
-        </div>
+    <div onclick="selectTheme('drink')" class="relative h-52 rc overflow-hidden cursor-pointer shadow-2xl transition-transform active:scale-95">
+      <img src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover">
+      <div class="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent"></div>
+      <div class="absolute bottom-7 left-7 flex items-end justify-between w-[calc(100%-56px)]">
+        <h2 class="fo text-5xl font-black italic text-white tracking-tighter uppercase" data-i18n="drink">飲み</h2>
+        <div class="w-14 h-14 glass rounded-2xl flex items-center justify-center text-purple-500 text-2xl"><i class="fas fa-glass-cheers"></i></div>
+      </div>
     </div>
-
-    <!-- PAGE: REGISTER FORM -->
-    <div id="page-owner-form" class="page px-6">
-        <div class="mb-10">
-            <button onclick="showPage('owner-apply')" class="mb-6 text-zinc-500 text-[10px] font-black uppercase"><i class="fas fa-arrow-left mr-2"></i> <span data-i18n="back">戻る</span></button>
-            <h2 class="text-4xl font-outfit font-black italic text-white uppercase tracking-tighter">Store Entry</h2>
-            <div id="plan-badge" class="mt-4 inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase italic"></div>
-        </div>
-        
-        <div class="glass p-8 rounded-card space-y-10 mb-20 shadow-2xl border-white/5">
-            <div class="space-y-6">
-                <span class="label-mini italic uppercase tracking-widest" data-i18n="store_photos">店舗写真 (メイン & サブ)</span>
-                <label class="upload-area main-upload">
-                    <input type="file" accept="image/*" class="absolute inset-0 opacity-0" onchange="handleImg(this, 'main')">
-                    <img id="prev-main" class="hidden absolute inset-0 w-full h-full object-cover">
-                    <div id="icon-main" class="flex flex-col items-center gap-2"><i class="fas fa-camera text-zinc-800 text-3xl"></i><span class="text-[9px] font-bold text-zinc-700 uppercase" data-i18n="main_photo">メイン</span></div>
-                </label>
-                <div class="grid grid-cols-4 gap-3">
-                    <label class="upload-area h-16 rounded-xl"><input type="file" accept="image/*" class="absolute inset-0 opacity-0" onchange="handleImg(this, 'sub', 0)"><img id="prev-sub-0" class="hidden absolute inset-0 w-full h-full object-cover"><i id="icon-sub-0" class="fas fa-plus text-zinc-800 text-xs"></i></label>
-                    <label class="upload-area h-16 rounded-xl"><input type="file" accept="image/*" class="absolute inset-0 opacity-0" onchange="handleImg(this, 'sub', 1)"><img id="prev-sub-1" class="hidden absolute inset-0 w-full h-full object-cover"><i id="icon-sub-1" class="fas fa-plus text-zinc-800 text-xs"></i></label>
-                    <label class="upload-area h-16 rounded-xl"><input type="file" accept="image/*" class="absolute inset-0 opacity-0" onchange="handleImg(this, 'sub', 2)"><img id="prev-sub-2" class="hidden absolute inset-0 w-full h-full object-cover"><i id="icon-sub-2" class="fas fa-plus text-zinc-800 text-xs"></i></label>
-                    <label class="upload-area h-16 rounded-xl"><input type="file" accept="image/*" class="absolute inset-0 opacity-0" onchange="handleImg(this, 'sub', 3)"><img id="prev-sub-3" class="hidden absolute inset-0 w-full h-full object-cover"><i id="icon-sub-3" class="fas fa-plus text-zinc-800 text-xs"></i></label>
-                </div>
-            </div>
-
-            <div class="space-y-6 pt-8 border-t border-white/5">
-                <span class="label-mini italic uppercase tracking-widest" data-i18n="store_details">店舗詳細情報</span>
-                <div><span class="label-mini" data-i18n="store_name_label">店舗名</span><input type="text" id="reg-name" class="input-dark"></div>
-                <div>
-                    <span class="label-mini" data-i18n="subcat_label">サブカテゴリ</span>
-                    <select id="reg-subcat" class="input-dark bg-zinc-900"></select>
-                </div>
-                <div><span class="label-mini" data-i18n="hours_label">営業時間</span><input type="text" id="reg-hours" placeholder="17:00-24:00" class="input-dark"></div>
-                <div><span class="label-mini" data-i18n="budget_label">予算</span><input type="text" id="reg-budget" placeholder="¥3,000" class="input-dark"></div>
-                <div><span class="label-mini" data-i18n="addr_label">店舗住所 (GPS用)</span><input type="text" id="reg-addr" placeholder="東京都..." class="input-dark"></div>
-                <div><span class="label-mini" data-i18n="tel_label">電話番号</span><input type="tel" id="reg-tel" class="input-dark"></div>
-                <div>
-                    <span class="label-mini" data-i18n="smoke_label">喫煙設定</span>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div onclick="setSmoking(true)" id="smok-ok" class="toggle-btn" data-i18n="smoke_ok">喫煙可</div>
-                        <div onclick="setSmoking(false)" id="smok-no" class="toggle-btn" data-i18n="smoke_no">禁煙</div>
-                    </div>
-                </div>
-                <div><span class="label-mini" data-i18n="desc_label">お店の紹介</span><textarea id="reg-desc" class="input-dark h-32"></textarea></div>
-            </div>
-
-            <div class="space-y-6 pt-8 border-t border-white/5">
-                <span class="label-mini italic uppercase tracking-widest" data-i18n="review_docs">審査用書類</span>
-                <div class="grid grid-cols-2 gap-4">
-                    <label class="upload-area doc-upload"><input type="file" accept="image/*" class="absolute inset-0 opacity-0" onchange="handleImg(this, 'lic')"><img id="prev-lic" class="hidden absolute inset-0 w-full h-full object-cover"><div id="icon-lic" class="text-center text-[8px] font-black uppercase text-zinc-700"><i class="fas fa-file-invoice text-xl block mb-1"></i><span data-i18n="doc_license">営業許可証</span></div></label>
-                    <label class="upload-area doc-upload"><input type="file" accept="image/*" class="absolute inset-0 opacity-0" onchange="handleImg(this, 'id-card')"><img id="prev-id-card" class="hidden absolute inset-0 w-full h-full object-cover"><div id="icon-id-card" class="text-center text-[8px] font-black uppercase text-zinc-700"><i class="fas fa-address-card text-xl block mb-1"></i><span data-i18n="doc_id">身分証</span></div></label>
-                </div>
-            </div>
-
-            <button onclick="processRegistration()" class="btn-primary uppercase" data-i18n="apply_submit">審査を申請する</button>
-        </div>
+    <div class="pt-4 pb-4 space-y-3">
+      <button onclick="showPage('owner-apply')" class="w-full glass p-7 rc text-center relative overflow-hidden active:scale-95 transition-transform">
+        <div class="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-500 to-red-500"></div>
+        <p class="text-white font-black text-base uppercase tracking-tight" data-i18n="owner_apply_btn">飲食店オーナー様 出店申請</p>
+        <p class="text-zinc-500 text-[10px] mt-1.5 font-bold uppercase italic" data-i18n="owner_campaign">今なら3ヶ月無料お試しキャンペーン中</p>
+      </button>
+      <button onclick="showPage('owner-login')" class="w-full py-5 text-zinc-700 font-black text-[11px] uppercase tracking-[.3em]" data-i18n="owner_login_btn">オーナー様 ログイン</button>
     </div>
+  </div>
+</div>
 
-    <!-- DETAIL MODAL -->
-    <div id="detail-modal"></div>
+<!-- ===== SHOP LIST + MAP + FEATURES ===== -->
 
-    <!-- BOTTOM NAV -->
-    <div id="bottom-nav" class="fixed bottom-0 w-full nav-blur h-24 hidden flex items-center justify-around px-12 z-[150]">
-        <button onclick="showPage('landing')" class="flex flex-col items-center gap-1.5 text-zinc-600" id="nav-search">
-            <i class="fas fa-search text-2xl"></i><span class="text-[8px] font-black uppercase tracking-widest" data-i18n="nav_search">探す</span>
+<div id="page-user-list" class="page px-0">
+  <div class="px-5 mb-4">
+    <button onclick="showPage('landing')" class="mb-4 py-2 px-4 glass rounded-full text-zinc-400 text-[10px] font-black uppercase"><i class="fas fa-arrow-left mr-2"></i><span data-i18n="back">戻る</span></button>
+    <div class="flex justify-between items-end mb-4">
+      <h3 id="theme-label" class="fo text-5xl font-black italic text-white uppercase tracking-tighter">Dining</h3>
+      <div id="sort-area" class="flex gap-4 mb-1">
+        <button id="sort-dist" onclick="setSort('dist')" class="sbtn active" data-i18n="sort_near">近い順</button>
+        <button id="sort-time" onclick="setSort('time')" class="sbtn" data-i18n="sort_recent">更新順</button>
+      </div>
+    </div>
+    <!-- ビュー切替 -->
+    <div class="flex border-b border-white/5 mb-1">
+      <button id="vtab-list"   onclick="setView('list')"   class="vtab active"><i class="fas fa-list mr-1.5"></i><span data-i18n="view_list">リスト</span></button>
+      <button id="vtab-map"    onclick="setView('map')"    class="vtab"><i class="fas fa-map-marker-alt mr-1.5"></i><span data-i18n="view_map">地図</span></button>
+      <button id="vtab-rank"   onclick="setView('rank')"   class="vtab"><i class="fas fa-fire mr-1.5"></i><span data-i18n="view_rank">ランキング</span></button>
+      <button id="vtab-radar"  onclick="setView('radar')"  class="vtab"><i class="fas fa-radar mr-1.5"></i><span data-i18n="view_radar">レーダー</span></button>
+    </div>
+  </div>
+
+  <div id="sub-cat-bar" class="flex ns px-5 gap-3 mb-6"></div>
+
+  <!-- リストビュー -->
+
+  <div id="list-view" class="space-y-10 px-5 pb-20"></div>
+
+  <!-- 地図ビュー -->
+
+  <div id="map-view" class="px-5 pb-20 hidden">
+    <div id="map-wrap"></div>
+    <div id="map-card" class="hidden mt-4 glass p-5 rc">
+      <div class="flex justify-between items-start gap-3 mb-3">
+        <div class="flex-1">
+          <span id="mc-cat" class="text-[9px] font-black uppercase text-zinc-500 italic block mb-1"></span>
+          <h4 id="mc-name" class="fo text-xl font-black italic text-white uppercase tracking-tight leading-tight"></h4>
+          <p id="mc-shout" class="text-sm text-zinc-400 mt-1 italic"></p>
+        </div>
+        <div id="mc-badge" class="sbadge flex-shrink-0 text-black"></div>
+      </div>
+      <!-- 確率ゲージ（地図カード内） -->
+      <div class="mb-4">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-[9px] font-black uppercase text-zinc-500" data-i18n="prob_label">今すぐ入れる確率</span>
+          <span id="mc-prob-num" class="fo font-black text-sm text-white"></span>
+        </div>
+        <div class="prob-wrap"><div id="mc-prob-bar" class="prob-bar" style="width:0%"></div></div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 mb-4">
+        <div class="glass rounded-2xl p-3 text-center">
+          <p class="text-[9px] text-zinc-600 font-black uppercase mb-1" data-i18n="hours">営業時間</p>
+          <p id="mc-hours" class="text-xs font-bold text-white"></p>
+        </div>
+        <div class="glass rounded-2xl p-3 text-center">
+          <p class="text-[9px] text-zinc-600 font-black uppercase mb-1" data-i18n="budget">予算</p>
+          <p id="mc-budget" class="text-xs font-bold text-white"></p>
+        </div>
+      </div>
+      <button id="mc-btn" class="bw text-sm" data-i18n="see_detail">詳細を見る</button>
+    </div>
+  </div>
+
+  <!-- 🔥 ランキングビュー -->
+
+  <div id="rank-view" class="px-5 pb-20 hidden">
+    <div class="mb-5 flex items-center gap-3">
+      <span class="hot-badge text-sm px-3 py-1.5"><div class="pulse-dot"></div>LIVE</span>
+      <p class="text-white font-black text-base" data-i18n="rank_title">今空いてる店ランキング</p>
+    </div>
+    <div id="rank-list" class="space-y-4"></div>
+  </div>
+
+  <!-- 🔥 レーダービュー -->
+
+  <div id="radar-view" class="px-5 pb-20 hidden">
+    <div class="mb-5">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="hot-badge"><div class="pulse-dot"></div>LIVE</span>
+        <p class="text-white font-black text-base" data-i18n="radar_title">満席回避レーダー</p>
+      </div>
+      <p class="text-zinc-500 text-[10px] font-bold" data-i18n="radar_desc">中心が現在地。色が明るいほど今すぐ入れる確率が高い。</p>
+    </div>
+    <!-- レーダーキャンバス -->
+    <div class="glass p-4 rc mb-5">
+      <canvas id="radar-canvas" width="320" height="320"></canvas>
+    </div>
+    <!-- レーダー凡例 -->
+    <div class="glass p-5 rc mb-5">
+      <p class="lbl mb-3">凡例</p>
+      <div class="space-y-2">
+        <div class="flex items-center gap-3"><div class="radar-legend-dot" style="background:#4ade80;"></div><span class="text-sm font-bold text-white" data-i18n="legend_ok">空席あり（今すぐ入れる）</span></div>
+        <div class="flex items-center gap-3"><div class="radar-legend-dot" style="background:#fbbf24;"></div><span class="text-sm font-bold text-white" data-i18n="legend_few">残りわずか（急いで）</span></div>
+        <div class="flex items-center gap-3"><div class="radar-legend-dot" style="background:#f87171;"></div><span class="text-sm font-bold text-white" data-i18n="legend_full">満席（しばらく待つ）</span></div>
+        <div class="flex items-center gap-3"><div class="radar-legend-dot" style="background:#3b82f6;"></div><span class="text-sm font-bold text-white" data-i18n="legend_you">現在地</span></div>
+      </div>
+    </div>
+    <!-- レーダー下部リスト -->
+    <p class="lbl mb-3 px-1" data-i18n="radar_nearby">近くの空席情報</p>
+    <div id="radar-list" class="space-y-3"></div>
+  </div>
+</div>
+
+<!-- ===== OWNER LOGIN ===== -->
+
+<div id="page-owner-login" class="page px-5">
+  <div class="mb-10">
+    <button onclick="showPage('landing')" class="mb-7 text-zinc-500 text-[10px] font-black uppercase"><i class="fas fa-arrow-left mr-2"></i><span data-i18n="back">戻る</span></button>
+    <h2 class="fo text-5xl font-black italic text-white uppercase tracking-tighter leading-none">Owner<br>Login</h2>
+    <p class="text-zinc-600 text-[10px] font-bold mt-3 italic" data-i18n="demo_hint">※ デモ: owner@demo.com / demo1234</p>
+  </div>
+  <div class="glass p-8 rc space-y-6 shadow-2xl">
+    <div><span class="lbl" data-i18n="login_email">メールアドレス</span><input type="email" id="login-email" class="inp" value="owner@demo.com"></div>
+    <div><span class="lbl" data-i18n="login_pw">パスワード</span><input type="password" id="login-pw" class="inp" value="demo1234"></div>
+    <div id="login-err" class="hidden text-red-400 text-xs font-bold px-1"></div>
+    <button onclick="handleLogin()" class="bw uppercase" data-i18n="signin">サインイン</button>
+    <p class="text-center text-zinc-600 text-[10px] font-bold">
+      <span data-i18n="no_account">アカウントをお持ちでない方は</span>
+      <button onclick="showPage('owner-apply')" class="text-orange-500 underline ml-1" data-i18n="register_here">出店申請</button>
+    </p>
+  </div>
+</div>
+
+<!-- ===== OWNER DASHBOARD ===== -->
+
+<div id="page-owner-main" class="page px-5">
+  <div class="flex justify-between items-start mb-7">
+    <div>
+      <p class="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-1" data-i18n="welcome_back">おかえりなさい</p>
+      <h2 id="adm-name" class="fo text-2xl font-black italic text-white uppercase tracking-tight">焼肉 暁</h2>
+      <span class="inline-block px-2 py-0.5 rounded-full text-[8px] font-black uppercase mt-2" style="background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.2);" data-i18n="approved">審査通過</span>
+    </div>
+    <button onclick="handleSignOut()" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-zinc-600 active:scale-90"><i class="fas fa-sign-out-alt"></i></button>
+  </div>
+  <!-- LINE -->
+  <div id="line-card" class="mb-4 p-5 rc" style="background:linear-gradient(135deg,rgba(6,199,85,.14),rgba(6,199,85,.04));border:1px solid rgba(6,199,85,.2);">
+    <div class="flex items-center gap-4">
+      <div style="width:44px;height:44px;background:#06c755;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:900;font-size:22px;color:white;">L</div>
+      <div class="flex-1"><p class="text-white font-black text-sm" data-i18n="line_title">LINEで空席を更新</p><p class="text-zinc-400 text-[10px] font-bold mt-0.5" data-i18n="line_desc">毎朝9時に確認。◯△✖︎を返信するだけ。</p></div>
+      <button onclick="connectLine()" style="background:#06c755;color:white;font-weight:900;font-size:11px;padding:9px 14px;border-radius:12px;border:none;cursor:pointer;" data-i18n="line_connect">連携する</button>
+    </div>
+  </div>
+  <!-- ステータス -->
+  <div class="glass p-7 rc shadow-xl mb-4">
+    <p class="lbl text-center mb-6 italic" data-i18n="current_status">現在の空席ステータス</p>
+    <div class="grid grid-cols-3 gap-3">
+      <button onclick="setAdmStatus('◯')"  id="adm-ok"   class="abtn"><span class="text-2xl">◯</span><span class="text-[9px]" data-i18n="st_ok">空席あり</span></button>
+      <button onclick="setAdmStatus('△')"  id="adm-few"  class="abtn"><span class="text-2xl">△</span><span class="text-[9px]" data-i18n="st_few">残りわずか</span></button>
+      <button onclick="setAdmStatus('✖︎')" id="adm-full" class="abtn"><span class="text-2xl">✖︎</span><span class="text-[9px]" data-i18n="st_full">満席</span></button>
+    </div>
+  </div>
+  <!-- ひとこと -->
+  <div class="glass p-7 rc shadow-xl mb-4">
+    <p class="lbl mb-3 italic" data-i18n="todays_shout">本日の「ひとこと」</p>
+    <textarea id="adm-shout" class="inp h-24 text-base font-bold italic">【本日限定】厚切りタン残りわずか！</textarea>
+    <button onclick="saveStatus()" class="bw mt-5 uppercase" data-i18n="publish_btn">ステータスを今すぐ公開</button>
+  </div>
+  <!-- 店舗情報 -->
+  <div class="glass p-7 rc shadow-xl">
+    <p class="lbl mb-4 italic" data-i18n="store_info">店舗情報</p>
+    <div class="space-y-3">
+      <div class="flex justify-between"><span class="text-zinc-500 text-xs" data-i18n="hours">営業時間</span><span class="font-bold text-xs text-white">17:00 - 23:30</span></div>
+      <div class="flex justify-between"><span class="text-zinc-500 text-xs" data-i18n="budget">予算</span><span class="font-bold text-xs text-white">¥6,000〜¥9,000</span></div>
+      <div class="flex justify-between"><span class="text-zinc-500 text-xs" data-i18n="smoking">喫煙</span><span class="font-bold text-xs text-white">禁煙</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PLAN SELECT ===== -->
+
+<div id="page-owner-apply" class="page px-5">
+  <div class="mb-10">
+    <button onclick="showPage('landing')" class="mb-7 text-zinc-500 text-[10px] font-black uppercase"><i class="fas fa-arrow-left mr-2"></i><span data-i18n="cancel">キャンセル</span></button>
+    <h2 class="fo text-4xl font-black italic text-white uppercase leading-tight tracking-tighter">Plan<br>Select</h2>
+  </div>
+  <div class="space-y-5 pb-20">
+    <div class="glass p-8 rc" style="border:1px solid rgba(245,158,11,.15);">
+      <span class="text-orange-500 font-black text-[10px] tracking-widest uppercase italic block mb-2" data-i18n="plan_food">通常プラン（ご飯）</span>
+      <h4 class="fo text-4xl font-black text-white mb-1">¥1,500<span class="text-sm font-normal text-zinc-500">/月</span></h4>
+      <p class="text-[10px] text-orange-400 font-bold italic mb-5" data-i18n="free_3mo">今なら3ヶ月無料！</p>
+      <div class="space-y-2 mb-6 text-[11px] text-zinc-400 font-bold">
+        <p><i class="fas fa-check text-orange-500 mr-2"></i><span data-i18n="feat_1">リアルタイム空席表示</span></p>
+        <p><i class="fas fa-check text-orange-500 mr-2"></i><span data-i18n="feat_2">ランキング・レーダー掲載</span></p>
+        <p><i class="fas fa-check text-orange-500 mr-2"></i><span data-i18n="feat_3">LINE Bot連携</span></p>
+      </div>
+      <button onclick="setPlan('food')" class="bw" data-i18n="reg_plan">このプランで登録</button>
+    </div>
+    <div class="glass p-8 rc" style="border:1px solid rgba(167,139,250,.15);">
+      <span class="text-purple-400 font-black text-[10px] tracking-widest uppercase italic block mb-2" data-i18n="plan_drink">飲みプラン（夜・バー）</span>
+      <h4 class="fo text-4xl font-black text-white mb-1">¥2,500<span class="text-sm font-normal text-zinc-500">/月</span></h4>
+      <p class="text-[10px] text-purple-400 font-bold italic mb-5" data-i18n="free_3mo">今なら3ヶ月無料！</p>
+      <div class="space-y-2 mb-6 text-[11px] text-zinc-400 font-bold">
+        <p><i class="fas fa-check text-purple-400 mr-2"></i><span data-i18n="feat_4">深夜帯アクティブ強化</span></p>
+        <p><i class="fas fa-check text-purple-400 mr-2"></i><span data-i18n="feat_5">ランキング優先表示</span></p>
+        <p><i class="fas fa-check text-purple-400 mr-2"></i><span data-i18n="feat_3">LINE Bot連携</span></p>
+      </div>
+      <button onclick="setPlan('drink')" class="bw" style="background:#7c3aed;color:white;" data-i18n="reg_plan">このプランで登録</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== REGISTER FORM ===== -->
+
+<div id="page-owner-form" class="page px-5">
+  <div class="mb-8">
+    <button onclick="showPage('owner-apply')" class="mb-6 text-zinc-500 text-[10px] font-black uppercase"><i class="fas fa-arrow-left mr-2"></i><span data-i18n="back">戻る</span></button>
+    <h2 class="fo text-4xl font-black italic text-white uppercase tracking-tighter">Store<br>Entry</h2>
+    <div id="plan-badge" class="mt-3 inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase italic bg-orange-500/20 text-orange-500"></div>
+  </div>
+  <div class="space-y-6 mb-24">
+    <div class="glass p-7 rc space-y-5">
+      <span class="lbl italic" data-i18n="account_info">アカウント情報</span>
+      <div><span class="lbl" data-i18n="reg_email">メールアドレス</span><input type="email" id="reg-email" class="inp" placeholder="owner@example.com"></div>
+      <div><span class="lbl" data-i18n="reg_pw">パスワード（8文字以上）</span><input type="password" id="reg-pw" class="inp" placeholder="••••••••"></div>
+      <div><span class="lbl" data-i18n="reg_name2">担当者名</span><input type="text" id="reg-fullname" class="inp" placeholder="山田 太郎"></div>
+    </div>
+    <div class="glass p-7 rc space-y-5">
+      <span class="lbl italic" data-i18n="store_photos">店舗写真</span>
+      <label class="upload-area main-upload block w-full">
+        <input type="file" accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" onchange="prevImg(this,'pm','im')">
+        <img id="pm" class="hidden absolute inset-0 w-full h-full object-cover rounded-[18px]">
+        <div id="im" class="flex flex-col items-center gap-2 pointer-events-none"><i class="fas fa-camera text-zinc-700 text-3xl"></i><span class="text-[9px] font-bold text-zinc-700 uppercase" data-i18n="main_photo">メイン写真</span></div>
+      </label>
+      <div class="grid grid-cols-4 gap-3">
+        <label class="upload-area h-16 rounded-xl block relative"><input type="file" accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" onchange="prevImg(this,'ps0','pi0')"><img id="ps0" class="hidden absolute inset-0 w-full h-full object-cover rounded-xl"><i id="pi0" class="fas fa-plus text-zinc-700 text-xs pointer-events-none"></i></label>
+        <label class="upload-area h-16 rounded-xl block relative"><input type="file" accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" onchange="prevImg(this,'ps1','pi1')"><img id="ps1" class="hidden absolute inset-0 w-full h-full object-cover rounded-xl"><i id="pi1" class="fas fa-plus text-zinc-700 text-xs pointer-events-none"></i></label>
+        <label class="upload-area h-16 rounded-xl block relative"><input type="file" accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" onchange="prevImg(this,'ps2','pi2')"><img id="ps2" class="hidden absolute inset-0 w-full h-full object-cover rounded-xl"><i id="pi2" class="fas fa-plus text-zinc-700 text-xs pointer-events-none"></i></label>
+        <label class="upload-area h-16 rounded-xl block relative"><input type="file" accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" onchange="prevImg(this,'ps3','pi3')"><img id="ps3" class="hidden absolute inset-0 w-full h-full object-cover rounded-xl"><i id="pi3" class="fas fa-plus text-zinc-700 text-xs pointer-events-none"></i></label>
+      </div>
+    </div>
+    <div class="glass p-7 rc space-y-5">
+      <span class="lbl italic" data-i18n="store_details">店舗詳細情報</span>
+      <div><span class="lbl" data-i18n="store_name_label">店舗名</span><input type="text" id="reg-shop" class="inp" placeholder="例：焼肉 暁"></div>
+      <div><span class="lbl" data-i18n="subcat_label">カテゴリ</span><select id="reg-subcat" class="inp"></select></div>
+      <div><span class="lbl" data-i18n="hours_label">営業時間</span><input type="text" id="reg-hours" placeholder="17:00-24:00" class="inp"></div>
+      <div><span class="lbl" data-i18n="budget_label">予算目安</span><input type="text" id="reg-budget" placeholder="¥3,000〜" class="inp"></div>
+      <div><span class="lbl" data-i18n="addr_label">住所</span><input type="text" id="reg-addr" placeholder="東京都新宿区..." class="inp"></div>
+      <div><span class="lbl" data-i18n="tel_label">電話番号</span><input type="tel" id="reg-tel" placeholder="03-xxxx-xxxx" class="inp"></div>
+      <div>
+        <span class="lbl" data-i18n="smoke_label">喫煙設定</span>
+        <div class="grid grid-cols-2 gap-3">
+          <button onclick="setSmoking(false)" id="smok-no" class="tog sel" data-i18n="smoke_no">禁煙</button>
+          <button onclick="setSmoking(true)"  id="smok-ok" class="tog"    data-i18n="smoke_ok">喫煙可</button>
+        </div>
+      </div>
+      <div><span class="lbl" data-i18n="desc_label">お店の紹介文</span><textarea id="reg-desc" class="inp h-24" placeholder="こだわりや雰囲気を教えてください"></textarea></div>
+    </div>
+    <div class="glass p-7 rc space-y-4">
+      <span class="lbl italic" data-i18n="review_docs">審査用書類（非公開）</span>
+      <p class="text-[10px] text-zinc-500 font-bold -mt-1" data-i18n="docs_note">書類は管理者のみ閲覧可能です。</p>
+      <div class="grid grid-cols-2 gap-4">
+        <label class="upload-area doc-upload block relative"><input type="file" accept="image/*,application/pdf" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" onchange="docReady(this,'lic-i')"><div id="lic-i" class="text-center text-[8px] font-black uppercase text-zinc-700 pointer-events-none"><i class="fas fa-file-invoice text-xl block mb-1"></i><span data-i18n="doc_license">営業許可証</span></div></label>
+        <label class="upload-area doc-upload block relative"><input type="file" accept="image/*" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" onchange="docReady(this,'id-i')"><div id="id-i" class="text-center text-[8px] font-black uppercase text-zinc-700 pointer-events-none"><i class="fas fa-address-card text-xl block mb-1"></i><span data-i18n="doc_id">身分証</span></div></label>
+      </div>
+    </div>
+    <div id="reg-err" class="hidden text-red-400 text-xs font-bold px-1"></div>
+    <button onclick="submitReg()" class="bw uppercase" data-i18n="apply_submit">審査を申請する</button>
+  </div>
+</div>
+
+<!-- 詳細モーダル -->
+
+<div id="detail-modal"></div>
+
+<!-- ボトムナビ -->
+
+<div id="bottom-nav" class="fixed bottom-0 w-full nav-blur h-20 items-center justify-around px-10 z-[150]" style="display:none;">
+  <button onclick="showPage('landing')" class="flex flex-col items-center gap-1.5 text-zinc-600 active:text-white transition-colors">
+    <i class="fas fa-search text-xl"></i>
+    <span class="text-[8px] font-black uppercase tracking-widest" data-i18n="nav_search">探す</span>
+  </button>
+  <button onclick="goAdmin()" class="flex flex-col items-center gap-1.5 text-zinc-600 active:text-white transition-colors">
+    <i class="fas fa-store text-xl"></i>
+    <span class="text-[8px] font-black uppercase tracking-widest" data-i18n="nav_admin">管理</span>
+  </button>
+</div>
+
+<script>
+// ============================================================
+// PWA
+// ============================================================
+if('serviceWorker' in navigator){
+  const sw=`const C='aki-aru-v4';self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(['/'])).then(()=>self.skipWaiting()))});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(r=>{if(r.ok||r.type==='opaque'){caches.open(C).then(c=>c.put(e.request,r.clone()))}return r}).catch(()=>caches.match(e.request)))});`
+  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{})
+}
+const mf={name:'Aki-Aru',short_name:'Aki-Aru',start_url:'/',display:'standalone',background_color:'#060608',theme_color:'#060608',orientation:'portrait',icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='114' fill='%23f59e0b'/%3E%3Ctext x='256' y='340' font-family='Arial Black' font-size='280' font-weight='900' fill='white' text-anchor='middle' font-style='italic'%3EA%3C/text%3E%3C/svg%3E",sizes:'512x512',type:'image/svg+xml',purpose:'any maskable'}]}
+const ml=document.createElement('link');ml.rel='manifest';ml.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(mf));document.head.appendChild(ml)
+
+// ============================================================
+// 翻訳
+// ============================================================
+const T={
+  ja:{hero_title:'Live<br>Seats.',hero_sub:'リアルタイム空席確認',food:'ご飯',drink:'飲み',hot_now:'今夜空いてる店 TOP3',owner_apply_btn:'飲食店オーナー様 出店申請',owner_campaign:'今なら3ヶ月無料お試しキャンペーン中',owner_login_btn:'オーナー様 ログイン',back:'戻る',cancel:'キャンセル',sort_near:'近い順',sort_recent:'更新順',nav_search:'探す',nav_admin:'管理',view_list:'リスト',view_map:'地図',view_rank:'ランキング',view_radar:'レーダー',see_detail:'詳細を見る',prob_label:'今すぐ入れる確率',rank_title:'今空いてる店ランキング',radar_title:'満席回避レーダー',radar_desc:'中心が現在地。色が明るいほど今すぐ入れる確率が高い。',radar_nearby:'近くの空席情報',legend_ok:'空席あり（今すぐ入れる）',legend_few:'残りわずか（急いで）',legend_full:'満席（しばらく待つ）',legend_you:'現在地',login_email:'メールアドレス',login_pw:'パスワード',signin:'サインイン',demo_hint:'※ デモ: owner@demo.com / demo1234',welcome_back:'おかえりなさい',current_status:'現在の空席ステータス',todays_shout:'本日の「ひとこと」',publish_btn:'ステータスを今すぐ公開',st_ok:'空席あり',st_few:'残りわずか',st_full:'満席',store_info:'店舗情報',hours:'営業時間',budget:'予算',smoking:'喫煙',line_title:'LINEで空席を更新',line_desc:'毎朝9時に確認。◯△✖︎を返信するだけ。',line_connect:'連携する',plan_food:'通常プラン（ご飯）',plan_drink:'飲みプラン（夜・バー）',free_3mo:'今なら3ヶ月無料！',reg_plan:'このプランで登録',feat_1:'リアルタイム空席表示',feat_2:'ランキング・レーダー掲載',feat_3:'LINE Bot連携',feat_4:'深夜帯アクティブ強化',feat_5:'ランキング優先表示',account_info:'アカウント情報',reg_email:'メールアドレス',reg_pw:'パスワード（8文字以上）',reg_name2:'担当者名',store_photos:'店舗写真',main_photo:'メイン写真',store_details:'店舗詳細情報',store_name_label:'店舗名',subcat_label:'カテゴリ',hours_label:'営業時間',budget_label:'予算目安',addr_label:'住所',tel_label:'電話番号',smoke_label:'喫煙設定',smoke_no:'禁煙',smoke_ok:'喫煙可',desc_label:'お店の紹介文',review_docs:'審査用書類',docs_note:'書類は管理者のみ閲覧可能です。',doc_license:'営業許可証',doc_id:'身分証',apply_submit:'審査を申請する',no_account:'アカウントをお持ちでない方は',register_here:'出店申請',approved:'審査通過',status_ok:'空席あり',status_few:'残りわずか',status_full:'満席',updated:'更新',call:'電話',map:'マップ',about:'お店について',shout_label:'店主の一言',km:'km',just_now:'たった今',min_ago:'分前',hour_ago:'時間前',all:'すべて',teishoku:'定食',seafood:'海鮮',nabe:'鍋物',yakiniku:'焼肉',ramen:'ラーメン',italian:'イタリアン',izakaya:'居酒屋',stand_bar:'立ち飲み',bar:'バー',snack:'スナック',bistro:'ビストロ',saved:'更新しました！',login_err:'IDまたはパスワードが違います',submit_ok:'申請を受理しました！審査まで1〜2営業日お待ちください。',fill_req:'必須項目を入力してください',pw_short:'パスワードは8文字以上',line_connected:'LINE連携しました！毎朝9時に確認メッセージが届きます。',prob_high:'今すぐ入れる',prob_mid:'急げば入れる',prob_low:'難しいかも',rank_unit:'位'},
+  en:{hero_title:'Live<br>Seats.',hero_sub:'REAL-TIME OCCUPANCY',food:'Dining',drink:'Drinks',hot_now:"Tonight's Top 3",owner_apply_btn:'Owner Application',owner_campaign:'3-Month Free Trial',owner_login_btn:'Owner Login',back:'Back',cancel:'Cancel',sort_near:'Nearby',sort_recent:'Recent',nav_search:'Search',nav_admin:'Admin',view_list:'List',view_map:'Map',view_rank:'Ranking',view_radar:'Radar',see_detail:'Details',prob_label:'Entry Probability',rank_title:'Vacancy Ranking',radar_title:'Crowd Avoidance Radar',radar_desc:'Center = your location. Brighter = more likely to get in now.',radar_nearby:'Nearby Vacancies',legend_ok:'Available (Enter now)',legend_few:'Few Left (Hurry)',legend_full:'Full (Wait)',legend_you:'Your Location',login_email:'Email',login_pw:'Password',signin:'Sign In',demo_hint:'※ Demo: owner@demo.com / demo1234',welcome_back:'Welcome back',current_status:'Current Status',todays_shout:'Daily Message',publish_btn:'Publish Now',st_ok:'Available',st_few:'Few Left',st_full:'Full',store_info:'Store Info',hours:'Hours',budget:'Budget',smoking:'Smoking',line_title:'Update via LINE',line_desc:'Morning check at 9AM. Reply ◯△✖︎.',line_connect:'Connect',plan_food:'Standard (Food)',plan_drink:'Night (Bar)',free_3mo:'First 3 months free!',reg_plan:'Register',feat_1:'Live Seat Updates',feat_2:'Ranking & Radar',feat_3:'LINE Bot',feat_4:'Night Boost',feat_5:'Priority Ranking',account_info:'Account',reg_email:'Email',reg_pw:'Password (8+ chars)',reg_name2:'Name',store_photos:'Photos',main_photo:'Main',store_details:'Store Info',store_name_label:'Store Name',subcat_label:'Category',hours_label:'Hours',budget_label:'Budget',addr_label:'Address',tel_label:'Phone',smoke_label:'Smoking',smoke_no:'Non-Smoking',smoke_ok:'Smoking OK',desc_label:'Description',review_docs:'Documents',docs_note:'Admins only.',doc_license:'License',doc_id:'ID',apply_submit:'Submit',no_account:'No account?',register_here:'Apply',approved:'Approved',status_ok:'Open',status_few:'Few',status_full:'Full',updated:'Updated',call:'Call',map:'Map',about:'About',shout_label:'Message',km:'km',just_now:'Just now',min_ago:'m ago',hour_ago:'h ago',all:'All',teishoku:'Set Meal',seafood:'Seafood',nabe:'Hot Pot',yakiniku:'BBQ',ramen:'Ramen',italian:'Italian',izakaya:'Izakaya',stand_bar:'Stand Bar',bar:'Bar',snack:'Hostess Bar',bistro:'Bistro',saved:'Updated!',login_err:'Invalid credentials',submit_ok:'Application received!',fill_req:'Fill required fields',pw_short:'8+ characters',line_connected:'LINE connected!',prob_high:'Enter now',prob_mid:'Hurry up',prob_low:'Might be tough',rank_unit:''},
+  'zh-tw':{hero_title:'Live<br>Seats.',hero_sub:'即時空位確認',food:'美食',drink:'飲酒',hot_now:'今晚空位 TOP3',owner_apply_btn:'店家入駐',owner_campaign:'限時3個月免費',owner_login_btn:'店家登入',back:'返回',cancel:'取消',sort_near:'最近',sort_recent:'最新',nav_search:'搜尋',nav_admin:'管理',view_list:'列表',view_map:'地圖',view_rank:'排名',view_radar:'雷達',see_detail:'詳情',prob_label:'現在可入店機率',rank_title:'空位排行榜',radar_title:'避開客滿雷達',radar_desc:'中心為現在位置。顏色越亮越容易入座。',radar_nearby:'附近空位',legend_ok:'有位（現在可入）',legend_few:'少量（快去）',legend_full:'客滿（稍等）',legend_you:'現在位置',login_email:'電子郵件',login_pw:'密碼',signin:'登入',demo_hint:'※ Demo: owner@demo.com / demo1234',welcome_back:'歡迎回來',current_status:'目前空位',todays_shout:'今日留言',publish_btn:'立即發佈',st_ok:'有位',st_few:'少量',st_full:'客滿',store_info:'店鋪資訊',hours:'時間',budget:'預算',smoking:'吸菸',line_title:'用LINE更新',line_desc:'早上9點確認。回覆◯△✖︎即可。',line_connect:'連結',plan_food:'普通方案',plan_drink:'晚間方案',free_3mo:'前3個月免費！',reg_plan:'選擇',feat_1:'即時空位',feat_2:'排名・雷達',feat_3:'LINE Bot',feat_4:'深夜強化',feat_5:'優先排名',account_info:'帳號',reg_email:'電子郵件',reg_pw:'密碼(8字+)',reg_name2:'姓名',store_photos:'照片',main_photo:'主圖',store_details:'詳情',store_name_label:'店名',subcat_label:'分類',hours_label:'時間',budget_label:'預算',addr_label:'地址',tel_label:'電話',smoke_label:'吸菸',smoke_no:'禁菸',smoke_ok:'可吸菸',desc_label:'介紹',review_docs:'文件',docs_note:'僅供管理員。',doc_license:'執照',doc_id:'證件',apply_submit:'提交',no_account:'沒有帳號？',register_here:'申請',approved:'通過',status_ok:'有位',status_few:'少量',status_full:'客滿',updated:'更新',call:'電話',map:'地圖',about:'關於',shout_label:'留言',km:'公里',just_now:'剛剛',min_ago:'分鐘前',hour_ago:'小時前',all:'全部',teishoku:'定食',seafood:'海鮮',nabe:'火鍋',yakiniku:'燒肉',ramen:'拉麵',italian:'義式',izakaya:'居酒屋',stand_bar:'立飲',bar:'酒吧',snack:'小酒館',bistro:'小館',saved:'已更新！',login_err:'帳號或密碼錯誤',submit_ok:'申請已收到！',fill_req:'填寫必填',pw_short:'需8字以上',line_connected:'LINE已連結！',prob_high:'現在可入',prob_mid:'快去',prob_low:'可能很難',rank_unit:'名'},
+  'zh-cn':{hero_title:'Live<br>Seats.',hero_sub:'实时空位确认',food:'美食',drink:'饮酒',hot_now:'今晚空位 TOP3',owner_apply_btn:'商家入驻',owner_campaign:'限时3个月免费',owner_login_btn:'商家登录',back:'返回',cancel:'取消',sort_near:'最近',sort_recent:'最新',nav_search:'搜索',nav_admin:'管理',view_list:'列表',view_map:'地图',view_rank:'排行',view_radar:'雷达',see_detail:'详情',prob_label:'现在可入店概率',rank_title:'空位排行榜',radar_title:'避开客满雷达',radar_desc:'中心为当前位置。颜色越亮越容易入座。',radar_nearby:'附近空位',legend_ok:'有位（现在可入）',legend_few:'少量（快去）',legend_full:'客满（稍等）',legend_you:'当前位置',login_email:'电子邮件',login_pw:'密码',signin:'登录',demo_hint:'※ Demo: owner@demo.com / demo1234',welcome_back:'欢迎回来',current_status:'当前空位',todays_shout:'今日留言',publish_btn:'立即发布',st_ok:'有位',st_few:'少量',st_full:'客满',store_info:'店铺信息',hours:'时间',budget:'预算',smoking:'吸烟',line_title:'用LINE更新',line_desc:'早上9点确认。回复◯△✖︎即可。',line_connect:'连接',plan_food:'普通方案',plan_drink:'晚间方案',free_3mo:'前3个月免费！',reg_plan:'选择',feat_1:'实时空位',feat_2:'排行・雷达',feat_3:'LINE Bot',feat_4:'深夜强化',feat_5:'优先排行',account_info:'账号',reg_email:'电子邮件',reg_pw:'密码(8位+)',reg_name2:'姓名',store_photos:'照片',main_photo:'主图',store_details:'详情',store_name_label:'店铺名',subcat_label:'分类',hours_label:'时间',budget_label:'预算',addr_label:'地址',tel_label:'电话',smoke_label:'吸烟',smoke_no:'禁烟',smoke_ok:'可吸烟',desc_label:'介绍',review_docs:'文件',docs_note:'仅供管理员。',doc_license:'执照',doc_id:'证件',apply_submit:'提交',no_account:'没有账号？',register_here:'申请',approved:'通过',status_ok:'有位',status_few:'少量',status_full:'客满',updated:'更新',call:'电话',map:'地图',about:'关于',shout_label:'留言',km:'公里',just_now:'刚刚',min_ago:'分钟前',hour_ago:'小时前',all:'全部',teishoku:'定食',seafood:'海鲜',nabe:'火锅',yakiniku:'烧肉',ramen:'拉面',italian:'意式',izakaya:'居酒屋',stand_bar:'立饮',bar:'酒吧',snack:'小酒馆',bistro:'小馆',saved:'已更新！',login_err:'账号或密码错误',submit_ok:'申请已收到！',fill_req:'填写必填',pw_short:'需8位以上',line_connected:'LINE已连接！',prob_high:'现在可入',prob_mid:'快去',prob_low:'可能很难',rank_unit:'名'},
+  ko:{hero_title:'Live<br>Seats.',hero_sub:'실시간 빈자리 확인',food:'맛집',drink:'술집',hot_now:'오늘 밤 빈자리 TOP3',owner_apply_btn:'오너 입점 신청',owner_campaign:'3개월 무료',owner_login_btn:'오너 로그인',back:'뒤로',cancel:'취소',sort_near:'가까운순',sort_recent:'업데이트순',nav_search:'찾기',nav_admin:'관리',view_list:'목록',view_map:'지도',view_rank:'랭킹',view_radar:'레이더',see_detail:'자세히',prob_label:'지금 입장 확률',rank_title:'빈자리 랭킹',radar_title:'만석 회피 레이더',radar_desc:'중심이 현재 위치. 밝을수록 지금 바로 입장 가능.',radar_nearby:'근처 빈자리',legend_ok:'여유（지금 바로）',legend_few:'조금（서둘러）',legend_full:'만석（잠시 대기）',legend_you:'현재 위치',login_email:'이메일',login_pw:'비밀번호',signin:'로그인',demo_hint:'※ Demo: owner@demo.com / demo1234',welcome_back:'어서오세요',current_status:'현재 빈자리',todays_shout:'오늘의 한마디',publish_btn:'지금 업데이트',st_ok:'여유',st_few:'조금',st_full:'만석',store_info:'매장 정보',hours:'영업 시간',budget:'예산',smoking:'흡연',line_title:'LINE으로 업데이트',line_desc:'매일 오전 9시 확인. ◯△✖︎만 답장.',line_connect:'연동',plan_food:'일반 플랜',plan_drink:'심야 플랜',free_3mo:'3개월 무료！',reg_plan:'등록',feat_1:'실시간 빈자리',feat_2:'랭킹・레이더',feat_3:'LINE Bot',feat_4:'심야 강화',feat_5:'랭킹 우선',account_info:'계정',reg_email:'이메일',reg_pw:'비밀번호(8자+)',reg_name2:'담당자명',store_photos:'사진',main_photo:'메인',store_details:'상세',store_name_label:'매장명',subcat_label:'카테고리',hours_label:'영업 시간',budget_label:'예산',addr_label:'주소',tel_label:'전화',smoke_label:'흡연',smoke_no:'금연',smoke_ok:'흡연 가능',desc_label:'소개',review_docs:'서류',docs_note:'관리자만 열람.',doc_license:'허가증',doc_id:'신분증',apply_submit:'신청',no_account:'계정 없으신가요？',register_here:'신청',approved:'승인',status_ok:'여유',status_few:'조금',status_full:'만석',updated:'업데이트',call:'전화',map:'지도',about:'상세',shout_label:'한마디',km:'km',just_now:'방금',min_ago:'분 전',hour_ago:'시간 전',all:'전체',teishoku:'정식',seafood:'해산물',nabe:'전골',yakiniku:'야키니쿠',ramen:'라멘',italian:'이탈리안',izakaya:'이자카야',stand_bar:'선술집',bar:'바',snack:'스낵바',bistro:'비스트로',saved:'업데이트 완료！',login_err:'이메일 또는 비밀번호 오류',submit_ok:'신청 접수！',fill_req:'필수 항목 입력',pw_short:'8자 이상',line_connected:'LINE 연동 완료！',prob_high:'지금 바로',prob_mid:'서둘러',prob_low:'어려울 수도',rank_unit:'위'}
+}
+
+const CATS={food:['all','teishoku','seafood','nabe','yakiniku','ramen','italian'],drink:['all','izakaya','stand_bar','bar','snack','bistro']}
+
+const MOCK=[
+  {id:'s1',name:'焼肉 暁 -AKATSUKI-',theme:'food',sub_cat:'yakiniku',status:'◯',shout:'【本日限定】厚切りタン残りわずか！',last_update:new Date(Date.now()-5*60000).toISOString(),lat:35.6890,lng:139.6920,hours:'17:00-23:30',budget:'¥6,000〜',smoking:'禁煙',description:'厳選和牛。個室完備。赤身からホルモンまで極上の部位をご堪能ください。',img:'https://images.unsplash.com/photo-1514355315815-2b64b0216b14?auto=format&fit=crop&w=800&q=80',imgs:['https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80']},
+  {id:'s2',name:'寿司割烹 海月',theme:'food',sub_cat:'seafood',status:'△',shout:'本日おまかせコースのみ',last_update:new Date(Date.now()-25*60000).toISOString(),lat:35.6880,lng:139.6950,hours:'11:30-22:00',budget:'¥8,000〜',smoking:'禁煙',description:'江戸前寿司の伝統を守りながら、旬の素材を大切にした割烹。',img:'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=80',imgs:[]},
+  {id:'s3',name:'Trattoria Sole',theme:'food',sub_cat:'italian',status:'◯',shout:'本日パスタ：トリュフカルボナーラ',last_update:new Date(Date.now()-10*60000).toISOString(),lat:35.6910,lng:139.6890,hours:'11:00-23:00',budget:'¥3,000〜',smoking:'禁煙',description:'南イタリアの家庭料理を現代的にアレンジ。自家製パスタが自慢。',img:'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80',imgs:[]},
+  {id:'s4',name:'麺処 龍',theme:'food',sub_cat:'ramen',status:'✖︎',shout:'本日分終了。また明日！',last_update:new Date(Date.now()-90*60000).toISOString(),lat:35.6870,lng:139.6930,hours:'11:00〜売切れ終了',budget:'¥900〜',smoking:'禁煙',description:'24時間煮込む豚骨スープ。行列必至の人気店。',img:'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80',imgs:[]},
+  {id:'s5',name:'Bar Midnight',theme:'drink',sub_cat:'bar',status:'△',shout:'限定「夜桜サワー」本日のみ',last_update:new Date(Date.now()-60*60000).toISOString(),lat:35.6920,lng:139.7000,hours:'20:00-05:00',budget:'¥3,000〜',smoking:'喫煙可',description:'大人のための隠れ家バー。カウンター8席のみ。',img:'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80',imgs:[]},
+  {id:'s6',name:'立ち飲み処 千鳥',theme:'drink',sub_cat:'stand_bar',status:'◯',shout:'ハッピーアワー21時まで！生¥300',last_update:new Date(Date.now()-3*60000).toISOString(),lat:35.6900,lng:139.6960,hours:'17:00-24:00',budget:'¥1,500〜',smoking:'喫煙可',description:'気軽に一杯。常連さんも一見さんも大歓迎。',img:'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=800&q=80',imgs:[]},
+  {id:'s7',name:'Bistro Lumin',theme:'drink',sub_cat:'bistro',status:'◯',shout:'ワインのグラス売りはじめました',last_update:new Date(Date.now()-15*60000).toISOString(),lat:35.6935,lng:139.6975,hours:'18:00-02:00',budget:'¥4,000〜',smoking:'禁煙',description:'フランスの田舎をイメージしたビストロ。自然派ワインが揃います。',img:'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=800&q=80',imgs:[]}
+]
+
+// ============================================================
+// 状態
+// ============================================================
+let lang='ja',theme='food',subCat='all',sortMode='dist',viewMode='list'
+let userLoc={lat:35.6895,lng:139.6917}
+let admStatus='◯',regSmoke=false,selPlan='food',loggedIn=false
+let shops=JSON.parse(JSON.stringify(MOCK))
+let leafMap=null,markers=[]
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+const t=k=>T[lang]?.[k]??T.ja[k]??k
+function showToast(msg,type='ok'){
+  const el=document.getElementById('toast')
+  el.textContent=msg;el.className=`toast show ${type}`
+  clearTimeout(el._t);el._t=setTimeout(()=>el.className='toast',2800)
+}
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+  document.getElementById('page-'+id).classList.add('active')
+  document.getElementById('bottom-nav').style.display=['user-list','owner-main'].includes(id)?'flex':'none'
+  window.scrollTo(0,0);applyLang()
+  if(id==='landing')renderLandingHot()
+  if(id==='user-list'&&viewMode==='map')setTimeout(initMap,100)
+}
+function applyLang(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k=el.getAttribute('data-i18n')
+    if(T[lang]?.[k]!==undefined)el.innerHTML=T[lang][k]
+  })
+}
+function setLang(code){
+  lang=code
+  document.querySelectorAll('.lpill').forEach(b=>b.classList.remove('active'))
+  document.getElementById('l-'+code).classList.add('active')
+  applyLang()
+  const onList=document.getElementById('page-user-list').classList.contains('active')
+  const onLand=document.getElementById('page-landing').classList.contains('active')
+  if(onList){renderPills();dispatchView()}
+  if(onLand)renderLandingHot()
+}
+
+// ============================================================
+// 計算
+// ============================================================
+function calcDist(a,b,c,d){
+  const R=6371,dL=(c-a)*Math.PI/180,dl=(d-b)*Math.PI/180
+  const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dl/2)**2
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))
+}
+function timeAgo(iso){
+  const s=(Date.now()-new Date(iso))/1000
+  if(s<60)return t('just_now');if(s<3600)return Math.floor(s/60)+t('min_ago')
+  return Math.floor(s/3600)+t('hour_ago')
+}
+function sColor(s){return s==='◯'?'bg-green-400':s==='△'?'bg-yellow-400':'bg-red-500'}
+function sTxt(s){return s==='◯'?t('status_ok'):s==='△'?t('status_few'):t('status_full')}
+function sHex(s){return s==='◯'?'#16a34a':s==='△'?'#d97706':'#dc2626'}
+function decay(shop){
+  const m=(Date.now()-new Date(shop.last_update))/60000
+  if(shop.status==='◯'&&m>30)return '△'
+  if(shop.status==='△'&&m>60)return '✖︎'
+  return shop.status
+}
+
+// ============================================================
+// 🔥 今すぐ入れる確率スコア計算
+// ============================================================
+function calcProb(shop){
+  const st=decay(shop)
+  const minAgo=(Date.now()-new Date(shop.last_update))/60000
+
+  // ベーススコア（ステータスから）
+  let base = st==='◯' ? 85 : st==='△' ? 45 : 8
+
+  // 更新時間による減衰
+  const decay_rate = st==='◯' ? 1.2 : st==='△' ? 0.8 : 0.3
+  base = Math.max(5, base - minAgo * decay_rate)
+
+  // 距離ボーナス（近いほど少しプラス）
+  const d=calcDist(userLoc.lat,userLoc.lng,shop.lat,shop.lng)
+  if(d<0.3) base=Math.min(99,base+5)
+
+  return Math.round(base)
+}
+
+function probLabel(score){
+  if(score>=70) return t('prob_high')
+  if(score>=35) return t('prob_mid')
+  return t('prob_low')
+}
+function probClass(score){
+  if(score>=70) return 'prob-high'
+  if(score>=35) return 'prob-mid'
+  return 'prob-low'
+}
+function probColor(score){
+  if(score>=70) return '#4ade80'
+  if(score>=35) return '#fbbf24'
+  return '#f87171'
+}
+
+// ============================================================
+// ランキングスコア（確率 × フレッシュネス）
+// ============================================================
+function rankScore(shop){
+  const prob=calcProb(shop)
+  const freshness=Math.max(0, 100-(Date.now()-new Date(shop.last_update))/60000*2)
+  return prob*0.7 + freshness*0.3
+}
+
+function getList(){
+  let list=shops.filter(s=>s.theme===theme&&(subCat==='all'||s.sub_cat===subCat))
+  list.forEach(s=>{s._d=calcDist(userLoc.lat,userLoc.lng,s.lat,s.lng);s._s=decay(s);s._prob=calcProb(s)})
+  list.sort((a,b)=>sortMode==='dist'?a._d-b._d:new Date(b.last_update)-new Date(a.last_update))
+  return list
+}
+
+// ============================================================
+// ランディングのホットスポット
+// ============================================================
+function renderLandingHot(){
+  const allShops=[...shops]
+  allShops.forEach(s=>{s._s=decay(s);s._score=rankScore(s);s._prob=calcProb(s)})
+  const top3=allShops
+    .filter(s=>s._s!=='✖︎')
+    .sort((a,b)=>b._score-a._score)
+    .slice(0,3)
+
+  document.getElementById('landing-hot').innerHTML=top3.map((s,i)=>`
+    <div onclick="openDetail('${s.id}')" class="flex items-center gap-4 cursor-pointer active:opacity-70 transition-opacity py-1">
+      <span class="fo font-black italic text-2xl ${i===0?'text-orange-400':'text-zinc-600'}" style="width:28px;flex-shrink:0;">${i+1}</span>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-0.5">
+          <p class="font-black text-white text-sm truncate">${s.name}</p>
+          ${i===0?'<span class="hot-badge text-[9px] px-2 py-0.5"><div class="pulse-dot" style="width:4px;height:4px;"></div>HOT</span>':''}
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="prob-wrap flex-1" style="height:4px;">
+            <div class="prob-bar ${probClass(s._prob)}" style="width:${s._prob}%;"></div>
+          </div>
+          <span class="fo font-black text-[11px]" style="color:${probColor(s._prob)};flex-shrink:0;">${s._prob}%</span>
+        </div>
+      </div>
+      <div class="sbadge ${sColor(s._s)} text-black flex-shrink-0" style="width:40px;height:40px;font-size:10px;">${sTxt(s._s)}</div>
+    </div>`).join('')
+}
+
+// ============================================================
+// ビュー切替
+// ============================================================
+function selectTheme(th){
+  theme=th;subCat='all'
+  document.getElementById('theme-label').textContent=t(th)
+  renderPills();renderList();showPage('user-list')
+}
+function renderPills(){
+  document.getElementById('sub-cat-bar').innerHTML=
+    CATS[theme].map(c=>`<button onclick="setSubCat('${c}')" class="pill ${subCat===c?'active':''}">${t(c)}</button>`).join('')
+}
+function setSubCat(c){subCat=c;renderPills();dispatchView()}
+function setSort(tp){
+  sortMode=tp
+  document.getElementById('sort-dist').classList.toggle('active',tp==='dist')
+  document.getElementById('sort-time').classList.toggle('active',tp==='time')
+  renderList()
+}
+function setView(v){
+  viewMode=v
+  ;['list','map','rank','radar'].forEach(k=>{
+    document.getElementById('vtab-'+k).classList.toggle('active',k===v)
+    document.getElementById(k+'-view').classList.toggle('hidden',k!==v)
+  })
+  document.getElementById('sort-area').style.display=v==='list'?'flex':'none'
+  dispatchView()
+}
+function dispatchView(){
+  if(viewMode==='list')renderList()
+  else if(viewMode==='map')setTimeout(initMap,80)
+  else if(viewMode==='rank')renderRanking()
+  else if(viewMode==='radar')renderRadar()
+}
+
+// ============================================================
+// リストビュー
+// ============================================================
+function renderList(){
+  const fb='https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80'
+  const list=getList()
+  const el=document.getElementById('list-view')
+  if(!list.length){el.innerHTML='<p class="text-center text-zinc-600 py-20 font-bold text-sm">この周辺に店舗はまだありません</p>';return}
+  el.innerHTML=list.map(s=>`
+    <div onclick="openDetail('${s.id}')" class="relative h-[400px] rc overflow-hidden shadow-2xl cursor-pointer active:scale-95 transition-transform duration-200">
+      <img src="${s.img||fb}" class="w-full h-full object-cover" loading="lazy">
+      <div class="absolute inset-0 bg-gradient-to-t from-black via-black/5 to-transparent"></div>
+      <div class="absolute top-6 right-6 flex flex-col items-end gap-2">
+        <div class="sbadge ${sColor(s._s)} text-black">${sTxt(s._s)}</div>
+        <div class="glass px-2.5 py-1 rounded-full text-[9px] font-black text-white uppercase">${timeAgo(s.last_update)}</div>
+      </div>
+      <!-- 確率バー（リストカード内） -->
+      <div class="absolute bottom-0 left-0 right-0 p-7">
+        <div class="flex items-center justify-between mb-2">
+          <h4 class="fo text-3xl font-black italic text-white uppercase tracking-tighter leading-tight">${s.name}</h4>
+        </div>
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-[9px] font-black uppercase text-zinc-400 italic">${t(s.sub_cat)}</span>
+          <span class="text-[9px] font-black text-white">${s._d.toFixed(1)}${t('km')}</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="prob-wrap flex-1" style="height:5px;">
+            <div class="prob-bar ${probClass(s._prob)}" style="width:${s._prob}%;"></div>
+          </div>
+          <span class="fo font-black text-sm" style="color:${probColor(s._prob)};flex-shrink:0;">${s._prob}% ${probLabel(s._prob)}</span>
+        </div>
+      </div>
+    </div>`).join('')
+}
+
+// ============================================================
+// 🔥 ランキングビュー
+// ============================================================
+function renderRanking(){
+  const allShops=[...shops].filter(s=>s.theme===theme&&(subCat==='all'||s.sub_cat===subCat))
+  allShops.forEach(s=>{s._s=decay(s);s._prob=calcProb(s);s._score=rankScore(s);s._d=calcDist(userLoc.lat,userLoc.lng,s.lat,s.lng)})
+  allShops.sort((a,b)=>b._score-a._score)
+
+  const medalColors=['#f59e0b','#9ca3af','#cd7c2f']
+  const medalLabels=['🥇','🥈','🥉']
+
+  document.getElementById('rank-list').innerHTML=allShops.map((s,i)=>`
+    <div onclick="openDetail('${s.id}')" class="rank-card">
+      <div class="flex items-start gap-4">
+        <!-- 順位 -->
+        <div class="flex flex-col items-center flex-shrink-0" style="width:48px;">
+          <span class="fo font-black italic text-3xl ${i<3?'text-orange-400':'text-zinc-700'}" style="line-height:1;">${i<3?medalLabels[i]:(i+1)}</span>
+          <span class="text-[9px] font-black text-zinc-600 mt-0.5">${t('rank_unit')}</span>
+        </div>
+        <!-- 店舗情報 -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <span class="text-[9px] font-black uppercase text-zinc-500 italic">${t(s.sub_cat)}</span>
+            ${i===0?'<span class="hot-badge text-[9px] px-2 py-0.5"><div class="pulse-dot" style="width:4px;height:4px;"></div>今夜イチオシ</span>':''}
+          </div>
+          <h4 class="fo text-xl font-black italic text-white uppercase tracking-tight leading-tight mb-1">${s.name}</h4>
+          ${s.shout?`<p class="text-[11px] text-zinc-400 italic mb-2">「${s.shout}」</p>`:''}
+          <!-- 確率ゲージ -->
+          <div class="flex items-center gap-3 mb-1">
+            <span class="text-[9px] font-black uppercase text-zinc-500">${t('prob_label')}</span>
+            <span class="fo font-black text-base" style="color:${probColor(s._prob)};">${s._prob}%</span>
+            <span class="text-[9px] font-bold" style="color:${probColor(s._prob)};">${probLabel(s._prob)}</span>
+          </div>
+          <div class="prob-wrap mb-3">
+            <div class="prob-bar ${probClass(s._prob)}" style="width:${s._prob}%;"></div>
+          </div>
+          <div class="flex items-center gap-3 text-[10px] text-zinc-500 font-bold">
+            <span><i class="fas fa-clock mr-1"></i>${s.hours}</span>
+            <span><i class="fas fa-yen-sign mr-1"></i>${s.budget}</span>
+            <span>${s._d.toFixed(1)}${t('km')}</span>
+          </div>
+        </div>
+        <!-- ステータスバッジ -->
+        <div class="sbadge ${sColor(s._s)} text-black flex-shrink-0">${sTxt(s._s)}</div>
+      </div>
+    </div>`).join('')
+}
+
+// ============================================================
+// 🔥 レーダービュー（Canvas）
+// ============================================================
+function renderRadar(){
+  const canvas=document.getElementById('radar-canvas')
+  if(!canvas)return
+  const ctx=canvas.getContext('2d')
+  const W=canvas.width,H=canvas.height
+  const cx=W/2,cy=H/2
+  const maxR=Math.min(W,H)/2-20
+
+  ctx.clearRect(0,0,W,H)
+
+  // 背景円（同心円）
+  for(let r=maxR;r>0;r-=maxR/4){
+    ctx.beginPath()
+    ctx.arc(cx,cy,r,0,Math.PI*2)
+    ctx.strokeStyle=`rgba(255,255,255,${0.03+(maxR-r)/maxR*0.04})`
+    ctx.lineWidth=1
+    ctx.stroke()
+    // 距離ラベル
+    const distLabel=(r/maxR*1.5).toFixed(1)+'km'
+    ctx.fillStyle='rgba(255,255,255,.15)'
+    ctx.font='10px Arial'
+    ctx.textAlign='center'
+    ctx.fillText(distLabel,cx,cy-r+12)
+  }
+
+  // スキャンライン（アニメーション用の静的表示）
+  const scanAngle=((Date.now()/3000)%(Math.PI*2))
+  const grad=ctx.createConicalGradient?null:null
+  ctx.save()
+  ctx.translate(cx,cy)
+  ctx.rotate(scanAngle)
+  const scanGrad=ctx.createLinearGradient(0,-maxR,0,0)
+  scanGrad.addColorStop(0,'rgba(245,158,11,0)')
+  scanGrad.addColorStop(1,'rgba(245,158,11,.15)')
+  ctx.beginPath()
+  ctx.moveTo(0,0)
+  ctx.arc(0,0,maxR,-Math.PI/6,0)
+  ctx.closePath()
+  ctx.fillStyle=scanGrad
+  ctx.fill()
+  ctx.restore()
+
+  // 店舗マーカー
+  const filteredShops=shops.filter(s=>s.theme===theme&&(subCat==='all'||s.sub_cat===subCat))
+  filteredShops.forEach(s=>{
+    s._s=decay(s);s._prob=calcProb(s)
+    const d=calcDist(userLoc.lat,userLoc.lng,s.lat,s.lng)
+    const angle=Math.atan2(s.lng-userLoc.lng,s.lat-userLoc.lat)
+    const r=Math.min(d/1.5*maxR, maxR-24)
+    const sx=cx+Math.sin(angle)*r
+    const sy=cy-Math.cos(angle)*r
+
+    // グロー
+    const glowR=18+s._prob/10
+    const glow=ctx.createRadialGradient(sx,sy,0,sx,sy,glowR)
+    const col=s._s==='◯'?'34,197,94':s._s==='△'?'251,191,36':'248,113,113'
+    glow.addColorStop(0,`rgba(${col},.6)`)
+    glow.addColorStop(1,`rgba(${col},0)`)
+    ctx.beginPath()
+    ctx.arc(sx,sy,glowR,0,Math.PI*2)
+    ctx.fillStyle=glow
+    ctx.fill()
+
+    // メインドット
+    ctx.beginPath()
+    ctx.arc(sx,sy,10,0,Math.PI*2)
+    ctx.fillStyle=s._s==='◯'?'#4ade80':s._s==='△'?'#fbbf24':'#f87171'
+    ctx.shadowColor=ctx.fillStyle
+    ctx.shadowBlur=8
+    ctx.fill()
+    ctx.shadowBlur=0
+
+    // 店舗名
+    ctx.fillStyle='rgba(255,255,255,.85)'
+    ctx.font='bold 10px Noto Sans JP, sans-serif'
+    ctx.textAlign='center'
+    ctx.fillText(s.name.length>6?s.name.slice(0,6)+'…':s.name, sx, sy+22)
+  })
+
+  // 現在地（中心）
+  ctx.beginPath()
+  ctx.arc(cx,cy,8,0,Math.PI*2)
+  ctx.fillStyle='#3b82f6'
+  ctx.shadowColor='#60a5fa'
+  ctx.shadowBlur=12
+  ctx.fill()
+  ctx.shadowBlur=0
+  ctx.beginPath()
+  ctx.arc(cx,cy,14,0,Math.PI*2)
+  ctx.strokeStyle='rgba(59,130,246,.4)'
+  ctx.lineWidth=2
+  ctx.stroke()
+
+  // レーダー下部リスト
+  const radarList=filteredShops.filter(s=>s._s!=='✖︎').sort((a,b)=>b._prob-a._prob).slice(0,5)
+  document.getElementById('radar-list').innerHTML=radarList.map(s=>`
+    <div onclick="openDetail('${s.id}')" class="flex items-center gap-4 glass p-4 rc cursor-pointer active:opacity-70">
+      <div class="sbadge ${sColor(s._s)} text-black flex-shrink-0" style="width:44px;height:44px;font-size:10px;">${sTxt(s._s)}</div>
+      <div class="flex-1 min-w-0">
+        <p class="font-black text-white text-sm truncate">${s.name}</p>
+        <div class="flex items-center gap-2 mt-1">
+          <div class="prob-wrap flex-1" style="height:4px;">
+            <div class="prob-bar ${probClass(s._prob)}" style="width:${s._prob}%;"></div>
+          </div>
+          <span class="fo font-black text-[11px] flex-shrink-0" style="color:${probColor(s._prob)};">${s._prob}%</span>
+        </div>
+      </div>
+      <i class="fas fa-chevron-right text-zinc-700 text-xs flex-shrink-0"></i>
+    </div>`).join('')
+}
+
+// ============================================================
+// 地図ビュー（Leaflet）
+// ============================================================
+function initMap(){
+  if(!document.getElementById('map-wrap'))return
+  if(!leafMap){
+    leafMap=L.map('map-wrap',{zoomControl:true,attributionControl:false}).setView([userLoc.lat,userLoc.lng],15)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(leafMap)
+    L.circleMarker([userLoc.lat,userLoc.lng],{radius:8,fillColor:'#3b82f6',color:'white',weight:2,fillOpacity:1}).addTo(leafMap)
+  }
+  markers.forEach(m=>m.remove());markers=[]
+  getList().forEach(s=>{
+    const prob=calcProb(s)
+    const icon=L.divIcon({
+      html:`<div style="width:50px;height:50px;border-radius:50%;background:${sHex(s._s)};display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:10px;color:white;box-shadow:0 4px 16px rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.3);cursor:pointer;line-height:1.2;text-align:center;padding:2px;"><span>${sTxt(s._s)}</span><span style="font-size:8px;opacity:.8;">${prob}%</span></div>`,
+      className:'',iconSize:[50,50],iconAnchor:[25,25]
+    })
+    const m=L.marker([s.lat,s.lng],{icon}).addTo(leafMap)
+    m.on('click',()=>showMapCard(s.id))
+    markers.push(m)
+  })
+}
+function showMapCard(id){
+  const s=shops.find(x=>x.id===id);if(!s)return
+  const st=decay(s);const prob=calcProb(s)
+  document.getElementById('mc-cat').textContent=t(s.sub_cat)
+  document.getElementById('mc-name').textContent=s.name
+  document.getElementById('mc-shout').textContent=s.shout?`「${s.shout}」`:''
+  document.getElementById('mc-hours').textContent=s.hours||'—'
+  document.getElementById('mc-budget').textContent=s.budget||'—'
+  const badge=document.getElementById('mc-badge')
+  badge.className=`sbadge ${sColor(st)} text-black flex-shrink-0`
+  badge.textContent=sTxt(st)
+  // 確率ゲージ更新
+  document.getElementById('mc-prob-num').textContent=`${prob}% ${probLabel(prob)}`
+  document.getElementById('mc-prob-num').style.color=probColor(prob)
+  const bar=document.getElementById('mc-prob-bar')
+  bar.className=`prob-bar ${probClass(prob)}`
+  setTimeout(()=>bar.style.width=prob+'%',50)
+  document.getElementById('mc-btn').onclick=()=>openDetail(id)
+  const card=document.getElementById('map-card')
+  card.classList.remove('hidden')
+  card.scrollIntoView({behavior:'smooth',block:'nearest'})
+}
+
+// ============================================================
+// 詳細モーダル（確率スコア付き）
+// ============================================================
+function openDetail(id){
+  const s=shops.find(x=>x.id===id);if(!s)return
+  const st=decay(s);const prob=calcProb(s)
+  const imgs=[s.img,...(s.imgs||[])].filter(Boolean)
+  if(!imgs.length)imgs.push('https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80')
+
+  // 確率リングSVG
+  const r=40,circ=2*Math.PI*r
+  const fill=circ*(1-prob/100)
+  const ringColor=probColor(prob)
+
+  document.getElementById('detail-modal').innerHTML=`
+    <div class="gallery-wrap">
+      <div class="gallery-scroll" id="gsc">
+        ${imgs.map(u=>`<div class="gallery-item"><img src="${u}" class="w-full h-full object-cover"></div>`).join('')}
+      </div>
+      <div class="gdots">${imgs.map((_,i)=>`<div class="dot ${i===0?'active':''}" id="gd${i}"></div>`).join('')}</div>
+      <button onclick="closeDetail()" class="absolute top-10 left-5 w-12 h-12 glass rounded-2xl flex items-center justify-center text-white z-50 active:scale-90 transition-transform"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="p-7 -mt-12 relative z-20 space-y-5 pb-32 bg-gradient-to-t from-black via-black to-transparent">
+      <div class="flex justify-between items-start gap-4">
+        <div class="flex-1">
+          <span class="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-1 block italic">${t(s.sub_cat)} • ${t('updated')}: ${timeAgo(s.last_update)}</span>
+          <h2 class="fo text-3xl font-black italic text-white uppercase tracking-tighter leading-tight">${s.name}</h2>
+        </div>
+        <div class="sbadge ${sColor(st)} text-black flex-shrink-0">${sTxt(st)}</div>
+      </div>
+
+      <!-- 🔥 今すぐ入れる確率（大表示） -->
+      <div class="prob-card">
+        <div class="flex items-center gap-5">
+          <!-- 円グラフ -->
+          <div class="score-ring" style="width:90px;height:90px;">
+            <svg viewBox="0 0 100 100" width="90" height="90">
+              <circle cx="50" cy="50" r="${r}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="8"/>
+              <circle cx="50" cy="50" r="${r}" fill="none" stroke="${ringColor}" stroke-width="8"
+                stroke-dasharray="${circ}" stroke-dashoffset="${fill}"
+                stroke-linecap="round" style="transition:stroke-dashoffset 1s cubic-bezier(.16,1,.3,1);"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+              <span class="fo font-black text-2xl" style="color:${ringColor};line-height:1;">${prob}%</span>
+              <span style="font-size:8px;font-weight:900;color:#71717a;text-transform:uppercase;letter-spacing:.08em;">${t('prob_label').slice(0,4)}</span>
+            </div>
+          </div>
+          <!-- テキスト -->
+          <div class="flex-1">
+            <p class="fo font-black text-lg" style="color:${ringColor};">${probLabel(prob)}</p>
+            <p class="text-zinc-500 text-[11px] font-bold mt-1 leading-snug">${
+              prob>=70?'今すぐ向かうのがベスト。空席が埋まる前に！':
+              prob>=35?'急いで向かえば入れる可能性が高い。':
+              '満席の可能性が高め。しばらく待つか別の店を探して。'
+            }</p>
+            <div class="prob-wrap mt-3">
+              <div class="prob-bar ${probClass(prob)}" style="width:${prob}%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      ${s.shout?`<div class="glass p-6 rounded-[26px]"><p class="text-[9px] text-zinc-500 font-black uppercase mb-2">${t('shout_label')}</p><p class="text-xl font-bold text-white italic">「${s.shout}」</p></div>`:''}
+      <div class="glass p-6 rounded-[26px] space-y-4">
+        ${s.hours?`<div class="flex gap-3 items-center"><div class="w-9 h-9 rounded-full glass flex items-center justify-center text-orange-500 flex-shrink-0"><i class="fas fa-clock text-sm"></i></div><div><p class="text-[9px] text-zinc-500 font-black uppercase">${t('hours')}</p><p class="text-sm font-bold text-white">${s.hours}</p></div></div>`:''}
+        ${s.budget?`<div class="flex gap-3 items-center"><div class="w-9 h-9 rounded-full glass flex items-center justify-center text-orange-500 flex-shrink-0"><i class="fas fa-yen-sign text-sm"></i></div><div><p class="text-[9px] text-zinc-500 font-black uppercase">${t('budget')}</p><p class="text-sm font-bold text-white">${s.budget}</p></div></div>`:''}
+        ${s.smoking?`<div class="flex gap-3 items-center"><div class="w-9 h-9 rounded-full glass flex items-center justify-center text-orange-500 flex-shrink-0"><i class="fas fa-smoking text-sm"></i></div><div><p class="text-[9px] text-zinc-500 font-black uppercase">${t('smoking')}</p><p class="text-sm font-bold text-white">${s.smoking}</p></div></div>`:''}
+      </div>
+      ${s.description?`<div class="glass p-6 rounded-[26px]"><p class="text-[9px] text-zinc-500 font-black uppercase mb-2">${t('about')}</p><p class="text-zinc-300 text-sm leading-relaxed">${s.description}</p></div>`:''}
+      <div class="grid grid-cols-2 gap-3 pt-1">
+        <button onclick="showToast('電話番号は本番環境で表示されます','info')" class="py-5 glass rounded-[22px] flex flex-col items-center gap-1 active:scale-95 transition-transform">
+          <i class="fas fa-phone text-white text-lg"></i><span class="text-[9px] font-black uppercase text-zinc-400">${t('call')}</span>
         </button>
-        <button onclick="checkAdminStatus()" class="flex flex-col items-center gap-1.5 text-zinc-600" id="nav-store">
-            <i class="fas fa-store text-2xl"></i><span class="text-[8px] font-black uppercase tracking-widest" data-i18n="nav_admin">管理</span>
-        </button>
-    </div>
+        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name)}" target="_blank" class="py-5 glass rounded-[22px] flex flex-col items-center gap-1 active:scale-95 transition-transform no-underline">
+          <i class="fas fa-location-arrow text-white text-lg"></i><span class="text-[9px] font-black uppercase text-zinc-400">${t('map')}</span>
+        </a>
+      </div>
+    </div>`
+  document.getElementById('detail-modal').classList.add('open')
+  document.body.style.overflow='hidden'
+  const sc=document.getElementById('gsc')
+  if(sc)sc.onscroll=()=>{const i=Math.round(sc.scrollLeft/window.innerWidth);document.querySelectorAll('.dot').forEach((d,j)=>d.classList.toggle('active',i===j))}
+}
+function closeDetail(){document.getElementById('detail-modal').classList.remove('open');document.body.style.overflow=''}
 
-    <script>
-        // --- TRANSLATIONS ---
-        const translations = {
-            ja: {
-                hero_title: "Live<br>Seats.", hero_sub: "リアルタイム空席確認", food: "ご飯", drink: "飲み", owner_apply_btn: "飲食店オーナー様 出店申請", owner_campaign: "今なら3ヶ月無料お試しキャンペーン中", owner_login_btn: "オーナー様 ログイン", back: "戻る", sort_near: "近い順", sort_recent: "更新順", nav_search: "探す", nav_admin: "管理",
-                login_id: "ログインID", login_pw: "パスワード", signin: "サインイン", admin_title: "管理画面", service_running: "サービス稼働中", current_status: "現在の空席ステータス", todays_shout: "本日の「ひとこと」", publish_btn: "ステータスを即時公開", cancel: "キャンセル", plan_food: "通常プラン（ご飯）", plan_drink: "飲みプラン（夜・バー）", register_with_plan: "このプランで登録", store_photos: "店舗写真 (メイン & サブ)", main_photo: "メイン", store_details: "店舗詳細情報", store_name_label: "店舗名", subcat_label: "サブカテゴリ", hours_label: "営業時間", budget_label: "予算", addr_label: "店舗住所 (GPS用)", tel_label: "電話番号", smoke_label: "喫煙設定", smoke_ok: "喫煙可", smoke_no: "禁煙", desc_label: "お店の紹介", review_docs: "審査用書類", doc_license: "営業許可証", doc_id: "身分証", apply_submit: "審査を申請する", feat_1: "リアルタイム空席表示", feat_2: "店舗詳細ページの作成", feat_3: "深夜帯のアクティブ表示強化", feat_4: "カテゴリ内優先表示",
-                status_ok: "◯", status_few: "△", status_full: "✖︎", updated: "更新", call: "電話", map: "マップ", about: "お店について", shout_label: "店主の一言", smoking: "喫煙", hours: "営業時間", budget: "予算目安", km: "km", just_now: "たった今", min_ago: "分前", hour_ago: "時間前",
-                all: "すべて", teishoku: "定食", seafood: "海鮮", nabe: "鍋物", yakiniku: "焼肉", ramen: "ラーメン", italian: "イタリアン", izakaya: "居酒屋", stand_bar: "立ち飲み", bar: "バー", snack: "スナック", bistro: "ビストロ"
-            },
-            en: {
-                hero_title: "Live<br>Seats.", hero_sub: "REAL-TIME OCCUPANCY", food: "Dining", drink: "Drinks", owner_apply_btn: "Owner Application", owner_campaign: "3-Month Free Trial Campaign", owner_login_btn: "Owner Login", back: "Back", sort_near: "Nearby", sort_recent: "Recent", nav_search: "Search", nav_admin: "Admin",
-                login_id: "Login ID", login_pw: "Password", signin: "Sign In", admin_title: "Dashboard", service_running: "Service Active", current_status: "Current Status", todays_shout: "Daily Message", publish_btn: "Publish Status", cancel: "Cancel", plan_food: "Standard (Food)", plan_drink: "Night (Drinks/Bar)", register_with_plan: "Register Plan", store_photos: "Store Photos", main_photo: "Main", store_details: "Store Info", store_name_label: "Store Name", subcat_label: "Category", hours_label: "Hours", budget_label: "Budget", addr_label: "Address (for GPS)", tel_label: "Phone", smoke_label: "Smoking", smoke_ok: "Allowed", smoke_no: "Non-Smoking", desc_label: "Description", review_docs: "Review Docs", doc_license: "License", doc_id: "ID Card", apply_submit: "Submit App", feat_1: "Live Seat Updates", feat_2: "Custom Store Page", feat_3: "Night Mode Boost", feat_4: "Priority Search",
-                status_ok: "OK", status_few: "Few", status_full: "Full", updated: "Updated", call: "Call", map: "Map", about: "About", shout_label: "Message", smoking: "Smoking", hours: "Hours", budget: "Budget", km: "km", just_now: "Just now", min_ago: "m ago", hour_ago: "h ago",
-                all: "All", teishoku: "Set Meal", seafood: "Seafood", nabe: "Hot Pot", yakiniku: "BBQ", ramen: "Ramen", italian: "Italian", izakaya: "Izakaya", stand_bar: "Stand Bar", bar: "Bar", snack: "Hostess Bar", bistro: "Bistro"
-            },
-            "zh-tw": {
-                hero_title: "Live<br>Seats.", hero_sub: "即時空位確認", food: "美食", drink: "飲酒", owner_apply_btn: "店家入駐申請", owner_campaign: "限時3個月免費試用", owner_login_btn: "店家登入", back: "返回", sort_near: "最近距離", sort_recent: "最新更新", nav_search: "搜尋", nav_admin: "管理",
-                login_id: "帳號", login_pw: "密碼", signin: "登入", admin_title: "管理後台", service_running: "服務運行中", current_status: "目前空位狀態", todays_shout: "店主今日留言", publish_btn: "立即發佈", cancel: "取消", plan_food: "普通方案（餐飲）", plan_drink: "晚間方案（酒吧）", register_with_plan: "選擇此方案", store_photos: "店鋪照片", main_photo: "主圖", store_details: "店鋪詳情", store_name_label: "店名", subcat_label: "子分類", hours_label: "營業時間", budget_label: "預算", addr_label: "地址 (GPS定位)", tel_label: "電話", smoke_label: "吸菸設定", smoke_ok: "可吸菸", smoke_no: "禁菸", desc_label: "店家介紹", review_docs: "審核文件", doc_license: "營業執照", doc_id: "身分證件", apply_submit: "提交申請", feat_1: "即時空位顯示", feat_2: "建立專屬頁面", feat_3: "深夜時段強化", feat_4: "搜尋優先權",
-                status_ok: "有位", status_few: "少量", status_full: "客滿", updated: "更新", call: "電話", map: "地圖", about: "關於店家", shout_label: "店主私房話", smoking: "吸菸", hours: "營業時間", budget: "預算", km: "公里", just_now: "剛剛", min_ago: "分鐘前", hour_ago: "小時前",
-                all: "全部", teishoku: "定食", seafood: "海鮮", nabe: "火鍋", yakiniku: "燒肉", ramen: "拉麵", italian: "義式", izakaya: "居酒屋", stand_bar: "立飲", bar: "酒吧", snack: "小酒館", bistro: "小餐館"
-            },
-            "zh-cn": {
-                hero_title: "Live<br>Seats.", hero_sub: "实时空位确认", food: "美食", drink: "饮酒", owner_apply_btn: "商家入驻申请", owner_campaign: "限时3个月免费试用", owner_login_btn: "商家登录", back: "返回", sort_near: "最近距离", sort_recent: "最新更新", nav_search: "搜索", nav_admin: "管理",
-                login_id: "账号", login_pw: "密码", signin: "登录", admin_title: "管理后台", service_running: "服务运行中", current_status: "当前空位状态", todays_shout: "店主今日留言", publish_btn: "立即发布", cancel: "取消", plan_food: "普通方案（餐饮）", plan_drink: "晚间方案（酒吧）", register_with_plan: "选择此方案", store_photos: "店铺照片", main_photo: "主图", store_details: "店铺详情", store_name_label: "店铺名", subcat_label: "子分类", hours_label: "营业时间", budget_label: "预算", addr_label: "地址 (GPS定位)", tel_label: "电话", smoke_label: "吸烟设定", smoke_ok: "可吸烟", smoke_no: "禁烟", desc_label: "店家介绍", review_docs: "审核文件", doc_license: "营业执照", doc_id: "身份证件", apply_submit: "提交申请", feat_1: "实时空位显示", feat_2: "创建专属页面", feat_3: "深夜时段强化", feat_4: "搜索优先权",
-                status_ok: "有位", status_few: "少量", status_full: "客满", updated: "更新", call: "电话", map: "地图", about: "关于店家", shout_label: "店主私房话", smoking: "吸烟", hours: "营业时间", budget: "预算", km: "公里", just_now: "刚刚", min_ago: "分钟前", hour_ago: "小时前",
-                all: "全部", teishoku: "定食", seafood: "海鲜", nabe: "火锅", yakiniku: "烧肉", ramen: "拉面", italian: "意式", izakaya: "居酒屋", stand_bar: "立饮", bar: "酒吧", snack: "小酒馆", bistro: "小餐馆"
-            },
-            ko: {
-                hero_title: "Live<br>Seats.", hero_sub: "실시간 빈자리 확인", food: "맛집", drink: "술집", owner_apply_btn: "음식점 오너 입점 신청", owner_campaign: "지금 신청하면 3개월 무료 체험", owner_login_btn: "오너 로그인", back: "뒤로", sort_near: "가까운순", sort_recent: "업데이트순", nav_search: "찾기", nav_admin: "관리",
-                login_id: "아이디", login_pw: "비밀번호", signin: "로그인", admin_title: "관리 화면", service_running: "서비스 가동 중", current_status: "현재 빈자리 상태", todays_shout: "오늘의 한마디", publish_btn: "상태 즉시 업데이트", cancel: "취소", plan_food: "일반 플랜 (식사)", plan_drink: "심야 플랜 (바/주점)", register_with_plan: "이 플랜으로 등록", store_photos: "매장 사진", main_photo: "메인", store_details: "매장 상세 정보", store_name_label: "매장명", subcat_label: "카테고리", hours_label: "영업 시간", budget_label: "예산", addr_label: "매장 주소 (GPS용)", tel_label: "전화번호", smoke_label: "흡연 설정", smoke_ok: "흡연 가능", smoke_no: "금연", desc_label: "매장 소개", review_docs: "심사 서류", doc_license: "영업 허가증", doc_id: "신분증", apply_submit: "심사 신청하기", feat_1: "실시간 빈자리 표시", feat_2: "상세 페이지 제작", feat_3: "심야 시간대 노출 강화", feat_4: "검색 우선 순위",
-                status_ok: "여유", status_few: "조금", status_full: "만석", updated: "업데이트", call: "전화", map: "지도", about: "상세 정보", shout_label: "사장님 한마디", smoking: "흡연", hours: "영업 시간", budget: "예산", km: "km", just_now: "방금", min_ago: "분 전", hour_ago: "시간 전",
-                all: "전체", teishoku: "정식", seafood: "해산물", nabe: "전골", yakiniku: "야키니쿠", ramen: "라멘", italian: "이탈리안", izakaya: "이자카야", stand_bar: "선술집", bar: "바", snack: "스낵바", bistro: "비스트로"
-            }
-        };
+// ============================================================
+// オーナー機能
+// ============================================================
+function handleLogin(){
+  const email=document.getElementById('login-email').value.trim()
+  const pw=document.getElementById('login-pw').value
+  const err=document.getElementById('login-err');err.classList.add('hidden')
+  if(email==='owner@demo.com'&&pw==='demo1234'){
+    loggedIn=true;setAdmUI(admStatus)
+    setTimeout(()=>document.getElementById('line-banner').classList.add('show'),1800)
+    showPage('owner-main')
+  }else{err.textContent=t('login_err');err.classList.remove('hidden')}
+}
+function handleSignOut(){loggedIn=false;document.getElementById('line-banner').classList.remove('show');showPage('landing')}
+function goAdmin(){loggedIn?showPage('owner-main'):showPage('owner-login')}
+function setAdmStatus(s){admStatus=s;setAdmUI(s);const shop=shops.find(x=>x.id==='s1');if(shop)shop.status=s}
+function setAdmUI(s){
+  document.getElementById('adm-ok').className  ='abtn'+(s==='◯'?' aok':'')
+  document.getElementById('adm-few').className ='abtn'+(s==='△'?' afew':'')
+  document.getElementById('adm-full').className='abtn'+(s==='✖︎'?' afull':'')
+  ;[['adm-ok','◯','st_ok'],['adm-few','△','st_few'],['adm-full','✖︎','st_full']].forEach(([id,sym,tk])=>{
+    document.getElementById(id).innerHTML=`<span class="text-2xl">${sym}</span><span class="text-[9px]">${t(tk)}</span>`
+  })
+}
+function saveStatus(){
+  const shout=document.getElementById('adm-shout').value
+  const shop=shops.find(x=>x.id==='s1')
+  if(shop){shop.status=admStatus;shop.shout=shout;shop.last_update=new Date().toISOString()}
+  showToast(t('saved'),'ok')
+  // ランディングのホットスポットも更新
+  if(document.getElementById('page-landing').classList.contains('active'))renderLandingHot()
+}
+function connectLine(){
+  showToast(t('line_connected'),'ok')
+  document.getElementById('line-card').innerHTML=`<div class="flex items-center gap-3"><div style="width:36px;height:36px;background:#06c755;border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-check text-white text-sm"></i></div><div><p class="text-green-400 font-black text-sm">LINE連携済み ✓</p><p class="text-zinc-500 text-[10px] font-bold mt-0.5">毎朝9時に確認メッセージが届きます</p></div></div>`
+  document.getElementById('line-banner').classList.remove('show')
+}
 
-        // --- DYNAMIC TRANSLATION LOGIC ---
-        // ユーザーが入力した日本語テキストを簡易的に翻訳する（実際はAPIを叩くか辞書マッチング）
-        const mockDictionary = {
-            "禁煙": { en: "No Smoking", "zh-tw": "禁菸", "zh-cn": "禁烟", ko: "금연" },
-            "喫煙可": { en: "Smoking Allowed", "zh-tw": "可吸菸", "zh-cn": "可吸烟", ko: "흡연 가능" },
-            "現金, クレカ": { en: "Cash, Credit", "zh-tw": "現金, 信用卡", "zh-cn": "现金, 信用卡", ko: "현금, 카드" },
-            "カード可": { en: "Card OK", "zh-tw": "可刷卡", "zh-cn": "可刷卡", ko: "카드 가능" }
-        };
+// プラン・登録
+function setPlan(plan){
+  selPlan=plan
+  const badge=document.getElementById('plan-badge')
+  badge.textContent=t(plan==='food'?'plan_food':'plan_drink')
+  badge.className=`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase italic mt-3 ${plan==='food'?'bg-orange-500/20 text-orange-500':'bg-purple-500/20 text-purple-400'}`
+  document.getElementById('reg-subcat').innerHTML=CATS[plan].filter(c=>c!=='all').map(c=>`<option value="${c}">${t(c)}</option>`).join('')
+  showPage('owner-form')
+}
+function setSmoking(val){regSmoke=val;document.getElementById('smok-ok').classList.toggle('sel',val);document.getElementById('smok-no').classList.toggle('sel',!val)}
+function prevImg(input,imgId,iconId){
+  if(!input.files||!input.files[0])return
+  const r=new FileReader();r.onload=e=>{const img=document.getElementById(imgId);if(img){img.src=e.target.result;img.classList.remove('hidden')}const ico=document.getElementById(iconId);if(ico)ico.style.display='none'};r.readAsDataURL(input.files[0])
+}
+function docReady(input,divId){if(!input.files||!input.files[0])return;const el=document.getElementById(divId);if(el){el.style.color='#4ade80';el.querySelector('i').className='fas fa-check-circle text-xl block mb-1 text-green-400'}}
+function submitReg(){
+  const email=document.getElementById('reg-email').value.trim()
+  const pw=document.getElementById('reg-pw').value
+  const name=document.getElementById('reg-shop').value.trim()
+  const err=document.getElementById('reg-err');err.classList.add('hidden')
+  if(!email||!name){err.textContent=t('fill_req');err.classList.remove('hidden');return}
+  if(pw.length<8){err.textContent=t('pw_short');err.classList.remove('hidden');return}
+  showToast(t('submit_ok'),'ok');setTimeout(()=>showPage('landing'),2500)
+}
 
-        function autoTranslate(text) {
-            if (!text || currentLang === 'ja') return text;
-            if (mockDictionary[text] && mockDictionary[text][currentLang]) return mockDictionary[text][currentLang];
-            
-            // 辞書にない場合のフォールバック（店舗名や紹介文など）
-            // 実際はGoogle Translate等のAPIを利用する
-            return text; 
-        }
+// ============================================================
+// 初期化
+// ============================================================
+window.addEventListener('load',()=>{
+  setTimeout(()=>{const s=document.getElementById('splash');s.classList.add('hide');setTimeout(()=>s.remove(),500)},1200)
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(p=>{
+      userLoc={lat:p.coords.latitude,lng:p.coords.longitude}
+      if(leafMap)leafMap.setView([userLoc.lat,userLoc.lng],15)
+      renderLandingHot()
+    })
+  }
+  const params=new URLSearchParams(location.search)
+  if(params.get('theme'))selectTheme(params.get('theme'))
 
-        let currentLang = 'ja';
+  // レーダーアニメーション（2秒ごとに再描画）
+  setInterval(()=>{
+    if(viewMode==='radar'&&document.getElementById('page-user-list').classList.contains('active'))renderRadar()
+  },2000)
 
-        function setLang(code) {
-            currentLang = code;
-            document.querySelectorAll('.lang-pill').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('l-' + code).classList.add('active');
-            
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (translations[code][key]) el.innerHTML = translations[code][key];
-            });
+  // 1分ごとに全ビュー更新
+  setInterval(()=>{
+    if(document.getElementById('page-user-list').classList.contains('active'))dispatchView()
+    if(document.getElementById('page-landing').classList.contains('active'))renderLandingHot()
+  },60000)
 
-            if (document.getElementById('page-user-list').classList.contains('active')) {
-                renderSubPills();
-                renderShopList();
-            }
-            if (document.getElementById('detail-modal').classList.contains('active')) {
-                // 詳細モーダルが開いている場合は中身を再描画（現状はIDが必要なためclose推奨だが今回は簡易実装）
-                closeShopDetail();
-            }
-        }
+  renderLandingHot()
+  applyLang()
+})
+</script>
 
-        // --- DATA STATE ---
-        let userLocation = { lat: 35.6895, lng: 139.6917 };
-        let currentTheme = 'food';
-        let currentSubCat = 'all';
-        let currentSort = 'dist';
-        let isOwnerLoggedIn = false;
-        let regSmoking = null;
-        let selectedPlan = 'food';
-        let currentAdminShopId = 's1';
-
-        const categoryMap = {
-            'food': ['all', 'teishoku', 'seafood', 'nabe', 'yakiniku', 'ramen', 'italian'],
-            'drink': ['all', 'izakaya', 'stand_bar', 'bar', 'snack', 'bistro']
-        };
-
-        let shopData = {
-            's1': { 
-                id: 's1', name: '焼肉 暁 -AKATSUKI-', theme: 'food', subCat: 'yakiniku', status: '◯', shout: '【本日限定】厚切りタン残りわずか！', 
-                lastUpdate: new Date(Date.now() - 1000*60*5).toISOString(), lat: 35.6890, lng: 139.6920,
-                hours: '17:00 - 23:30', budget: '¥6,000 - ¥9,000', payment: '現金, クレカ', smoking: '禁煙', 
-                description: '厳選和牛。個室完備。赤身からホルモンまで極上の部位をご堪能ください。', address: '東京都新宿区歌舞伎町1-1-1', tel: '03-1234-5678',
-                images: ['https://images.unsplash.com/photo-1514355315815-2b64b0216b14?auto=format&fit=crop&w=800&q=80', 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80']
-            },
-            's2': { 
-                id: 's2', name: 'Bar Midnight', theme: 'drink', subCat: 'bar', status: '△', shout: '限定カクテルあります。', 
-                lastUpdate: new Date(Date.now() - 1000*60*60).toISOString(), lat: 35.6920, lng: 139.7000,
-                hours: '20:00 - 05:00', budget: '¥3,000', payment: 'カード可', smoking: '喫煙可', 
-                description: '大人のための隠れ家バー。静かな時間をお楽しみください。', address: '東京都新宿区新宿3-1-1', tel: '03-0000-0000',
-                images: ['https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80']
-            }
-        };
-
-        // --- DECAY LOGIC ---
-        // 更新時間からステータスを自動減衰させる
-        function getDecayedStatus(shop) {
-            const diffMin = (Date.now() - new Date(shop.lastUpdate)) / 1000 / 60;
-            if (shop.status === '◯' && diffMin > 30) return '△'; // 30分放置で注意
-            if (shop.status === '△' && diffMin > 60) return '✖︎'; // 60分放置で不明（満席扱い）
-            return shop.status;
-        }
-
-        // --- NAVIGATION ---
-        function showPage(id) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById('page-' + id).classList.add('active');
-            const navVisible = ['user-list', 'owner-main'].includes(id);
-            document.getElementById('bottom-nav').classList.toggle('hidden', !navVisible);
-            window.scrollTo(0, 0);
-        }
-
-        function selectTheme(theme) {
-            currentTheme = theme;
-            currentSubCat = 'all';
-            document.getElementById('theme-label-header').innerText = theme === 'food' ? translations[currentLang].food : translations[currentLang].drink;
-            renderSubPills();
-            renderShopList();
-            showPage('user-list');
-        }
-
-        // --- RENDER LIST ---
-        function renderSubPills() {
-            const container = document.getElementById('sub-cat-container');
-            container.innerHTML = categoryMap[currentTheme].map(cat => `
-                <button onclick="setSubCat('${cat}')" class="sub-cat-pill ${currentSubCat === cat ? 'active' : ''}">${translations[currentLang][cat]}</button>
-            `).join('');
-        }
-
-        function setSubCat(cat) {
-            currentSubCat = cat;
-            renderSubPills();
-            renderShopList();
-        }
-
-        function setSort(type) {
-            currentSort = type;
-            document.getElementById('sort-dist').classList.toggle('active', type === 'dist');
-            document.getElementById('sort-time').classList.toggle('active', type === 'time');
-            renderShopList();
-        }
-
-        function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-
-        function formatTimeText(iso) {
-            const diff = (Date.now() - new Date(iso)) / 1000;
-            const t = translations[currentLang];
-            if(diff < 60) return t.just_now;
-            if(diff < 3600) return Math.floor(diff/60) + t.min_ago;
-            return Math.floor(diff/3600) + t.hour_ago;
-        }
-
-        function getStatusText(s) {
-            if(s === '◯') return translations[currentLang].status_ok;
-            if(s === '△') return translations[currentLang].status_few;
-            return translations[currentLang].status_full;
-        }
-
-        function renderShopList() {
-            const container = document.getElementById('shop-container');
-            const colors = { '◯': 'bg-green-400', '△': 'bg-yellow-400', '✖︎': 'bg-red-500' };
-            
-            let list = Object.values(shopData).filter(s => s.theme === currentTheme);
-            if(currentSubCat !== 'all') list = list.filter(s => s.subCat === currentSubCat);
-
-            list.forEach(s => {
-                s._dist = getDistance(userLocation.lat, userLocation.lng, s.lat, s.lng);
-                s._activeStatus = getDecayedStatus(s); // 減衰後のステータスを取得
-            });
-            list.sort((a,b) => currentSort === 'dist' ? a._dist - b._dist : new Date(b.lastUpdate) - new Date(a.lastUpdate));
-
-            container.innerHTML = list.map(shop => `
-                <div onclick="openShopDetail('${shop.id}')" class="relative h-[450px] rounded-card overflow-hidden shadow-2xl cursor-pointer active:scale-95 transition-transform">
-                    <img src="${shop.images[0]}" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent"></div>
-                    <div class="absolute top-8 right-8 flex flex-col items-end gap-3">
-                        <div class="status-badge ${colors[shop._activeStatus]} text-black">${getStatusText(shop._activeStatus)}</div>
-                        <div class="glass px-3 py-1 rounded-full text-[9px] font-black text-white uppercase">${formatTimeText(shop.lastUpdate)}</div>
-                    </div>
-                    <div class="absolute bottom-12 left-10">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-[9px] font-black uppercase text-zinc-400 italic">${translations[currentLang][shop.subCat]}</span>
-                            <span class="text-[9px] font-black text-white uppercase">${shop._dist.toFixed(1)}${translations[currentLang].km}</span>
-                        </div>
-                        <h4 class="text-4xl font-black italic text-white uppercase tracking-tighter leading-none">${autoTranslate(shop.name)}</h4>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // --- SHOP DETAIL ---
-        function openShopDetail(id) {
-            const shop = shopData[id];
-            const activeStatus = getDecayedStatus(shop);
-            const modal = document.getElementById('detail-modal');
-            const colors = { '◯': 'bg-green-400', '△': 'bg-yellow-400', '✖︎': 'bg-red-500' };
-            const t = translations[currentLang];
-
-            modal.innerHTML = `
-                <div class="gallery-wrapper">
-                    <div class="gallery-container" id="det-scroller">
-                        ${shop.images.map(img => `<div class="gallery-item"><img src="${img}" class="w-full h-full object-cover"></div>`).join('')}
-                    </div>
-                    <div class="gallery-dots">${shop.images.map((_, i) => `<div class="dot ${i === 0 ? 'active' : ''}" id="dot-${i}"></div>`).join('')}</div>
-                    <button onclick="closeShopDetail()" class="absolute top-10 left-6 w-14 h-14 glass rounded-2xl flex items-center justify-center text-white z-50"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="p-8 -mt-16 relative z-20 space-y-8 pb-40 bg-gradient-to-t from-black via-black to-transparent">
-                    <div class="flex justify-between items-end">
-                        <div>
-                            <span class="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1 block italic">${t[shop.subCat]} • ${t.updated}: ${formatTimeText(shop.lastUpdate)}</span>
-                            <h2 class="text-4xl font-black italic text-white uppercase tracking-tighter leading-none">${autoTranslate(shop.name)}</h2>
-                        </div>
-                        <div class="status-badge ${colors[activeStatus]} text-black">${getStatusText(activeStatus)}</div>
-                    </div>
-
-                    <div class="glass p-8 rounded-card border-white/5">
-                        <p class="text-[10px] text-zinc-500 font-black uppercase mb-3 tracking-widest">${t.shout_label}</p>
-                        <p class="text-2xl font-bold text-white italic">「${autoTranslate(shop.shout)}」</p>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div class="glass p-6 rounded-[30px] border-white/5 space-y-4">
-                            <div class="flex gap-4"><div class="w-10 h-10 rounded-full glass flex items-center justify-center text-orange-500"><i class="fas fa-clock"></i></div><div><p class="label-mini text-zinc-500">${t.hours}</p><p class="text-sm font-bold">${autoTranslate(shop.hours)}</p></div></div>
-                            <div class="flex gap-4"><div class="w-10 h-10 rounded-full glass flex items-center justify-center text-orange-500"><i class="fas fa-yen-sign"></i></div><div><p class="label-mini text-zinc-500">${t.budget}</p><p class="text-sm font-bold">${autoTranslate(shop.budget)}</p></div></div>
-                            <div class="flex gap-4"><div class="w-10 h-10 rounded-full glass flex items-center justify-center text-orange-500"><i class="fas fa-smoking"></i></div><div><p class="label-mini text-zinc-500">${t.smoking}</p><p class="text-sm font-bold">${autoTranslate(shop.smoking)}</p></div></div>
-                        </div>
-                        <div class="glass p-6 rounded-[30px] border-white/5"><p class="label-mini text-zinc-500 mb-2">${t.about}</p><p class="text-zinc-300 text-sm">${autoTranslate(shop.description)}</p></div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4 pt-4">
-                        <a href="tel:${shop.tel}" class="py-6 glass rounded-card flex flex-col items-center"><i class="fas fa-phone mb-2 text-white"></i><span class="text-[10px] font-black uppercase">${t.call}</span></a>
-                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address)}" target="_blank" class="py-6 glass rounded-card flex flex-col items-center"><i class="fas fa-location-arrow mb-2 text-white"></i><span class="text-[10px] font-black uppercase">${t.map}</span></a>
-                    </div>
-                </div>`;
-            
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-            const s = document.getElementById('det-scroller');
-            s.onscroll = () => {
-                const idx = Math.round(s.scrollLeft/window.innerWidth);
-                document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active', i===idx));
-            };
-        }
-
-        function closeShopDetail() {
-            document.getElementById('detail-modal').classList.remove('active');
-            document.body.style.overflow = '';
-        }
-
-        // --- OWNER APPLY ---
-        function setPlan(plan) {
-            selectedPlan = plan;
-            const badge = document.getElementById('plan-badge');
-            const t = translations[currentLang];
-            badge.innerText = plan === 'food' ? t.plan_food : t.plan_drink;
-            badge.className = `mt-4 inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase italic ${plan==='food'?'bg-orange-500/20 text-orange-500':'bg-purple-500/20 text-purple-500'}`;
-            
-            const subSel = document.getElementById('reg-subcat');
-            subSel.innerHTML = categoryMap[plan].filter(c => c !== 'all').map(c => `<option value="${c}">${t[c]}</option>`).join('');
-            showPage('owner-form');
-        }
-
-        function handleImg(input, type, idx) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const data = e.target.result;
-                    const id = type === 'sub' ? 'prev-sub-'+idx : 'prev-'+type;
-                    const iconId = type === 'sub' ? 'icon-sub-'+idx : 'icon-'+type;
-                    document.getElementById(id).src = data;
-                    document.getElementById(id).classList.remove('hidden');
-                    document.getElementById(iconId).classList.add('hidden');
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function setSmoking(isOk) {
-            regSmoking = isOk;
-            document.getElementById('smok-ok').classList.toggle('selected', isOk);
-            document.getElementById('smok-no').classList.toggle('selected', !isOk);
-        }
-
-        function processRegistration() {
-            alert(currentLang === 'ja' ? "申請を受理しました。書類審査(通常1-2営業日)をお待ちください。" : "Application received. Document review takes 1-2 business days.");
-            showPage('landing');
-        }
-
-        // --- OWNER DASHBOARD ---
-        function checkAdminStatus() {
-            isOwnerLoggedIn ? showPage('owner-main') : showPage('owner-login');
-        }
-
-        function handleLogin() {
-            isOwnerLoggedIn = true;
-            const shop = shopData[currentAdminShopId];
-            document.getElementById('adm-shop-name-display').innerText = shop.name;
-            document.getElementById('adm-shout-text').value = shop.shout;
-            updateAdminStatus(shop.status);
-            showPage('owner-main');
-        }
-
-        function updateAdminStatus(s) {
-            ['adm-btn-ok', 'adm-btn-few', 'adm-btn-full'].forEach(id => {
-                document.getElementById(id).className = 'h-24 rounded-3xl bg-zinc-900 border border-white/5 text-zinc-800 text-4xl font-black transition-all';
-            });
-            const targetId = s === '◯' ? 'adm-btn-ok' : (s === '△' ? 'adm-btn-few' : 'adm-btn-full');
-            document.getElementById(targetId).classList.add('bg-white', 'text-black', 'scale-105');
-            shopData[currentAdminShopId].status = s;
-        }
-
-        function saveDashboardData() {
-            shopData[currentAdminShopId].shout = document.getElementById('adm-shout-text').value;
-            shopData[currentAdminShopId].lastUpdate = new Date().toISOString();
-            alert(currentLang === 'ja' ? "リアルタイム更新が完了しました！" : "Live update complete!");
-            showPage('landing');
-        }
-
-        // --- INIT ---
-        window.onload = () => {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                });
-            }
-            setLang('ja');
-            // 定期的にリストを更新して自動減衰を反映
-            setInterval(() => {
-                if (document.getElementById('page-user-list').classList.contains('active')) {
-                    renderShopList();
-                }
-            }, 60000); // 1分ごとにチェック
-        };
-    </script>
 </body>
 </html>
-
-
